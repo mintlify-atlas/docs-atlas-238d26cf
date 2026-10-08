@@ -1,0 +1,96 @@
+---
+title: "Mod Compatibility Guide for mcopt"
+sidebarTitle: "Compatibility"
+description: "Which mods work alongside mcopt, which are incompatible, and how Distant Horizons, Fabric API, and OpenGL-using mods interact with the Metal backend."
+---
+
+mcopt is compatible with most Fabric mods, but its Metal backend has implications for mods that depend on Sodium, OpenGL, or the Blaze3D rendering pipeline. This page covers what works, what doesn't, and why.
+
+## Incompatible Mods
+
+<Warning>
+The following mods **cannot be loaded alongside mcopt**. Attempting to do so will prevent Minecraft from starting.
+</Warning>
+
+### Sodium
+
+mcopt declares a hard conflict with Sodium in its `fabric.mod.json`:
+
+```json
+"breaks": { "sodium": "*" }
+```
+
+Fabric reads this at startup and refuses to launch if both jars are present. Remove the Sodium jar from your mods folder before adding mcopt. Since mcopt 0.3.0-alpha.1, Sodium is no longer needed — mcopt includes its own terrain renderer and delivers higher fps than Sodium on Apple Silicon.
+
+### Mods That Require Sodium
+
+Mods whose `fabric.mod.json` declares a dependency on Sodium cannot be used with mcopt, because mcopt is incompatible with Sodium itself. Examples include:
+
+- **Better Block Entities** — requires Sodium
+- **Iris** — requires Sodium (and therefore cannot be used with mcopt)
+
+If you need one of these mods, you cannot use mcopt at the same time.
+
+---
+
+## Compatible: Fabric API
+
+Fabric API is **optional**. If none of your other mods need it, you can leave it out. If your mods do need it, keep it in the mods folder — mcopt does not conflict with it.
+
+When Fabric API's renderer API (FRAPI, `fabric-renderer-api-v1`) is present, mcopt's own block mesher automatically routes block tesselation through it. Connected texture mods, emissive layers, per-quad render layers, and any mod that registers a custom FRAPI renderer (such as a Mesh-based model) will render correctly alongside mcopt's own terrain pipeline.
+
+To disable the FRAPI path while keeping the own renderer, add `-Dmcopt.own.api=false` as a JVM argument. In that mode, vanilla's `ModelBlockRenderer` is used even with FRAPI loaded, and FRAPI-only model features render only their vanilla parts.
+
+---
+
+## Compatible: Distant Horizons
+
+Distant Horizons (DH) works with mcopt when using its default **Blaze3D renderer**.
+
+### How it works
+
+DH's Blaze3D renderer (the default on Minecraft 26.x) draws its LODs through Minecraft's renderpearl device. mcopt's Metal backend implements that device, so DH draws its distant terrain on the Metal backend without any special configuration.
+
+Because DH's internal code branches on whether the backend is OpenGL, mcopt tells DH the backend is `VULKAN` — the one non-OpenGL value DH recognises, and the one whose depth and origin conventions match Metal (0-to-1 depth range, top-left origin). This is handled automatically; you do not need to change any DH settings.
+
+### OpenGL renderer auto-detect
+
+If DH's config file (`config/DistantHorizons.toml`) sets `renderingEngine = "OPEN_GL"`, mcopt detects this at startup and automatically sets `mcopt.metal=false`, switching its own renderer to OpenGL. The following message appears in the log:
+
+```
+[mcopt] mcopt: Distant Horizons set to its OpenGL renderer needs OpenGL, using OpenGL; mcopt's other optimizations stay on (-Dmcopt.metal=true overrides)
+```
+
+To keep the Metal backend, change DH's `renderingEngine` back to `AUTO` (the default) or `BLAZE3D`, then relaunch. If you want to force Metal on regardless, add `-Dmcopt.metal=true` as a JVM argument — an explicit JVM flag wins over the auto-detect.
+
+<Note>
+Iris is not supported alongside mcopt. Iris requires Sodium, which declares a hard conflict with mcopt. Even if Iris itself is present without Sodium, DH would detect Iris and attempt its OpenGL renderer path, triggering the `mcopt.metal=false` fallback.
+</Note>
+
+---
+
+## OpenGL-Using Mods
+
+Mods that call OpenGL directly — via LWJGL, JOGL, or any other OpenGL binding — cannot draw on the Metal backend. When mcopt's Metal renderer is active, there is no live OpenGL context for those calls to target.
+
+To work around this, add the following line to `config/mcopt.properties`:
+
+```properties
+mcopt.metal=false
+```
+
+This reverts mcopt's renderer to OpenGL while keeping mcopt's other optimisations (thread QoS, chunk pipeline tuning, startup improvements). You will lose the Metal-backend fps gains for those mods but retain everything else.
+
+---
+
+## Compatibility Summary
+
+| Mod / Category | Status | Notes |
+|---|---|---|
+| Sodium | ❌ Incompatible | Declared conflict in `fabric.mod.json`; remove Sodium |
+| Iris | ❌ Incompatible | Requires Sodium |
+| Better Block Entities | ❌ Incompatible | Requires Sodium |
+| Fabric API | ✅ Optional | Keep if other mods need it; FRAPI mesher path is supported |
+| Distant Horizons | ✅ Compatible | Blaze3D renderer; OpenGL renderer triggers `mcopt.metal=false` auto-detect |
+| Mods calling OpenGL directly | ⚠️ Partial | Use `mcopt.metal=false` in `config/mcopt.properties` to enable OpenGL backend |
+| Most other Fabric mods | ✅ Compatible | No known issues |

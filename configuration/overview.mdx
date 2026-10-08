@@ -1,0 +1,82 @@
+---
+title: "Configure mcopt with Profiles and Property Flags"
+sidebarTitle: "Overview"
+description: "mcopt is configured through a properties file and JVM system properties. Profiles set sensible defaults; individual flags override any profile value."
+---
+
+mcopt uses a two-layer configuration system. A **profile** is a named collection of `-Dmcopt.*` flags that mcopt loads at startup, giving you a sensible starting point without touching your launcher's JVM argument list. On top of the profile, individual flags in `config/mcopt.properties` (or on the JVM command line) let you turn specific behaviours on or off without changing the profile. The two layers compose: the profile sets the baseline, and any key you specify directly wins over whatever the profile says.
+
+## Config file location
+
+mcopt writes `config/mcopt.properties` on first launch. The exact path depends on your launcher:
+
+| Launcher | Path |
+|---|---|
+| Official Launcher | `~/Library/Application Support/minecraft/config/mcopt.properties` |
+| Prism Launcher | `<instance>/minecraft/config/mcopt.properties` |
+
+## Precedence order
+
+When the same flag is set in more than one place, mcopt resolves it from highest to lowest:
+
+1. **JVM flags on the command line** (`-Dmcopt.foo=bar`) — always win; mcopt never overwrites a flag already set by the launcher.
+2. **Keys in `config/mcopt.properties`** — individual `mcopt.*` lines in the file override the profile's value for that key.
+3. **The active profile's values** — applied first; everything not overridden by 1 or 2 comes from here.
+
+## Default `mcopt.properties`
+
+On first launch, if `config/mcopt.properties` does not exist, mcopt writes it with the effective profile and a few commented examples:
+
+```properties
+# mcopt settings. Written on first launch; edit freely.
+#
+# The indie profile: mcopt's own terrain renderer on Apple Metal (no Sodium), plus measured startup and
+# thread-priority options. To turn all of it off (vanilla's renderer), change the next line to:  profile=none
+profile=indie
+#
+# Single switches win over the profile, e.g. our renderer off but the rest on:
+#mcopt.own=false
+# Far terrain (EXPERIMENTAL, off by default; for Macs with 10 or more GPU cores): remove the # below.
+#mcopt.lod=true
+```
+
+The `profile=` key accepts four values:
+
+| Value | Meaning |
+|---|---|
+| `indie` | mcopt's own Metal near-terrain renderer — the default |
+| `alpha` | Vanilla's renderer with mcopt's CPU/chunk pipeline and QoS improvements only |
+| `recommended` | All of `indie` plus far terrain and the full seamless set (10+ GPU cores) |
+| `none` | No profile — vanilla behaviour, all mcopt optimisations off |
+
+<Tip>
+Individual keys in `mcopt.properties` always win over the profile. This is useful when you want, say, the `indie` profile but with far terrain on: just add `mcopt.lod=true` on a new line below `profile=indie`.
+
+```properties
+profile=indie
+mcopt.lod=true
+```
+</Tip>
+
+## Configuration sub-pages
+
+<CardGroup cols={2}>
+  <Card title="Profiles" icon="layer-group" href="/configuration/profiles">
+    What each profile enables and how to switch between them.
+  </Card>
+  <Card title="Metal Renderer" icon="microchip" href="/configuration/metal-renderer">
+    Flags for the native Metal backend and the own near-terrain pipeline.
+  </Card>
+  <Card title="Far Terrain" icon="mountain" href="/configuration/far-terrain">
+    Enable the experimental LOD renderer for distant terrain on 10+ GPU-core Macs.
+  </Card>
+  <Card title="CPU & Chunk" icon="bolt" href="/configuration/cpu-and-chunk">
+    Chunk pipeline, startup, and edge-cap optimisations.
+  </Card>
+  <Card title="Thread QoS" icon="sliders" href="/configuration/thread-qos">
+    macOS thread Quality-of-Service tuning for the render and server threads.
+  </Card>
+  <Card title="All Flags" icon="list" href="/reference/all-flags">
+    Complete reference for every `-Dmcopt.*` flag.
+  </Card>
+</CardGroup>

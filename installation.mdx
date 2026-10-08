@@ -1,0 +1,117 @@
+---
+title: "Install mcopt on Your Apple Silicon Mac"
+sidebarTitle: "Installation"
+description: "Step-by-step guide to installing mcopt on Minecraft: Java Edition with Fabric Loader on macOS 26 using the official launcher or Prism Launcher."
+---
+
+This page walks you through installing mcopt on Minecraft: Java Edition with Fabric Loader on macOS 26. The process takes about five minutes whether you use the official Minecraft launcher or Prism Launcher. At the end you will have a working Fabric profile for Minecraft 26.3 with mcopt loaded and its native Metal renderer active.
+
+<Note>
+  **Prerequisites — check these before you start:**
+  - Apple Silicon Mac (M1 or newer)
+  - macOS 26 or later (check in **Apple menu → About This Mac**)
+  - Java 25 — the official launcher and Prism download it automatically for Minecraft 26.3; nothing to install manually
+  - Minecraft: Java Edition 26.3
+  - Fabric Loader 0.19.5 or newer
+  - Sodium **must not** be in your mods folder (see Step 4)
+</Note>
+
+<Steps>
+  <Step title="Install Fabric for Minecraft 26.3">
+    mcopt is a Fabric mod, so Fabric Loader must be installed before the mod will load.
+
+    **Official Minecraft launcher:**
+    1. Download and run the Fabric installer from [fabricmc.net/use/installer](https://fabricmc.net/use/installer/).
+    2. In the installer, set **Minecraft Version** to `26.3` and **Loader Version** to `0.19.5` or newer.
+    3. Click **Install**. The installer creates a new profile called *fabric-loader-26.3* (or similar) in your launcher.
+
+    **Prism Launcher:**
+    1. Open Prism Launcher and click **New Instance**.
+    2. Select Minecraft version `26.3`.
+    3. Under **Mod loader**, choose **Fabric** and select loader version `0.19.5` or newer.
+    4. Click **OK**. Prism creates the instance and downloads Fabric automatically.
+  </Step>
+
+  <Step title="Download the mcopt jar">
+    Go to the [mcopt Releases page](https://github.com/noahdunnagan/mcopt/releases) on GitHub and download the latest `mcopt-*.jar` file.
+
+    <Warning>
+      The jar is a mod file, not a standalone application. Double-clicking it in
+      Finder will only display the install instructions from inside the jar —
+      it will not install the mod. You must place it in the mods folder as
+      described in the next step.
+    </Warning>
+  </Step>
+
+  <Step title="Place the jar in your mods folder">
+    **Official launcher:**
+
+    Move or copy the downloaded jar to:
+
+    ```bash
+    ~/Library/Application Support/minecraft/mods
+    ```
+
+    If the `mods` folder does not exist yet, create it. The quickest way is **Finder → Go → Go to Folder** (⇧⌘G), paste the path above, press Return, then create a new folder named `mods` inside `minecraft`.
+
+    **Prism Launcher:**
+
+    1. Select your Fabric 26.3 instance in Prism.
+    2. Click **Edit** (or right-click → **Edit**).
+    3. Go to the **Mods** tab and click **Add file**.
+    4. Select the downloaded `mcopt-*.jar`.
+  </Step>
+
+  <Step title="Remove Sodium if present">
+    mcopt ships its own Metal-based terrain renderer and **cannot run alongside Sodium**. The mod explicitly declares this incompatibility in its Fabric metadata:
+
+    ```json
+    "breaks": { "sodium": "*" }
+    ```
+
+    Fabric Loader enforces this declaration: if both jars are present, the game will not start. Check your mods folder and delete any file whose name begins with `sodium-` before launching.
+
+    Mods that depend on Sodium — such as Better Block Entities and Iris — also cannot be used with this build of mcopt.
+
+    <Warning>
+      **mcopt and Sodium are incompatible.** mcopt declares `"breaks": { "sodium": "*" }` in its `fabric.mod.json`, which causes Fabric Loader to refuse to start if both are present. Remove any `sodium-*.jar` from your mods folder before launching.
+    </Warning>
+
+    <Tip>
+      Fabric API itself is **not** required by mcopt. If you have
+      `fabric-api-*.jar` in your mods folder for other mods, you can leave it
+      there — it does not conflict with mcopt.
+    </Tip>
+  </Step>
+
+  <Step title="Launch Minecraft with the Fabric profile">
+    **Official launcher:** Open the Minecraft Launcher, select the **Fabric** profile for 26.3 from the profile dropdown at the bottom-left, and click **Play**.
+
+    **Prism Launcher:** Double-click your Fabric 26.3 instance (or select it and click **Launch**).
+
+    Minecraft will start normally. On the very first launch, mcopt writes its configuration file at:
+
+    ```bash
+    # Official launcher
+    ~/Library/Application Support/minecraft/config/mcopt.properties
+
+    # Prism Launcher (replace <InstanceName> with your instance's name)
+    ~/Library/Application Support/PrismLauncher/instances/<InstanceName>/minecraft/config/mcopt.properties
+    ```
+
+    This file records the active profile (`indie` by default) and documents the available settings. You can edit it freely — see [Configuration Overview](/configuration/overview) for a full reference.
+  </Step>
+</Steps>
+
+## What happens on incompatible hardware
+
+If you launch Minecraft with mcopt on a computer that does not meet the requirements — an Intel Mac, a machine running Rosetta, or a Mac on an older macOS version — mcopt's platform check runs before any Metal code loads and stops the launch gracefully. Fabric displays its standard error dialog with a clear message explaining which requirement was not met and instructing you to remove the mcopt jar from the mods folder to play on that computer. The same message is written to the game log.
+
+<Note>
+  The platform check covers three cases: not running macOS at all, running on
+  an Intel (x86_64) Mac or an Intel JDK under Rosetta, and running macOS older
+  than version 26. In each case the dialog explains the specific problem and
+  what to do.
+</Note>
+
+Once the game is running, see [Verifying mcopt Is Active](/verifying) to confirm the Metal renderer loaded correctly.

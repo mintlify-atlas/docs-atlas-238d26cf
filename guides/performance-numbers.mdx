@@ -1,0 +1,53 @@
+---
+title: "mcopt Performance Numbers: fps Benchmarks on Apple Silicon"
+sidebarTitle: "Performance"
+description: "Measured fps results for mcopt on Mac mini M4, M6, and MacBook Neo across vanilla Minecraft, Sodium 0.9.3, and mcopt 0.2.0/0.3.0 at render distance 16."
+---
+
+The following fps numbers were measured on real hardware — spinning in place and flying through a test world at 1920×1080, render distance 16, VSync off, at least two runs each. All three machines ran the same test world; results are reported as **spinning fps / flying fps**.
+
+## Benchmark Results
+
+| Mac | Vanilla | Sodium 0.9.3 | mcopt 0.2.0-alpha.3 | mcopt 0.3.0-alpha.1 |
+|---|---|---|---|---|
+| Mac mini M4 (10-core GPU, 16 GB) | 156 / 146 | 275–281 / 253–267 | 1202–1223 / 1068–1074 | 1209–1211 / 1068–1069 |
+| MacBook Neo (A18 Pro, 5-core GPU, 8 GB) | 79–81 / 69–72 | 133–146 / 85–91 | 514–579 / 422–449 | 591–638 / 477–504 |
+| Mac mini M6 (12-core GPU, 16 GB) | 297–328 / 283–291 | 454–460 / 406–413 | 1988–1991 / 1738–1742 | 2020–2022 / 1690–1704 |
+
+Format: **spinning fps / flying fps**
+
+<Note>
+The Mac mini M4 and MacBook Neo cells were measured on commit `6c133ecc`, whose only difference from `9865a0a3` is the vGroup optimisation, which is gated off on those GPUs. The MacBook Neo's vanilla and Sodium cells come from the `da566d00` run, which differs from `9865a0a3` only in code that runs when Distant Horizons is installed. These are the numbers from the README source.
+</Note>
+
+<Note>
+Numbers reflect the integrated renderer only — no Distant Horizons or other render mod. Far terrain (`mcopt.lod=true`) was not enabled in these runs.
+</Note>
+
+## Getting the Most fps
+
+For best performance, open **Options > Video Settings** in-game and set:
+- **VSync** → Off
+- **Max Framerate** → Unlimited
+
+The numbers in the table above were recorded with VSync off and Max Framerate Unlimited.
+
+## What Drives the Gains
+
+mcopt's performance improvements come from several compounding changes to how Minecraft renders on Apple Silicon:
+
+**Native Metal GPU API**
+
+Minecraft's default renderer speaks OpenGL. On macOS that OpenGL traffic is translated to Metal in real time by Apple's MoltenVK/OpenGL translation layer, which adds CPU overhead on every draw call. mcopt replaces that path with a direct Metal backend — the `MetalBackend` class implements Minecraft's own `GpuBackend` interface and creates a native Metal device, cutting out the translation layer entirely.
+
+**Own terrain pipeline**
+
+mcopt's own terrain renderer (`mcopt.own`) uses compact vertex layouts and GPU-unit occlusion culling to reduce the amount of work submitted to the GPU each frame. Visible sections are determined on the GPU rather than the CPU, and vertex data is packed more tightly so memory bandwidth is used efficiently.
+
+**Thread QoS and chunk pipeline**
+
+mcopt raises Java thread priorities to match macOS quality-of-service levels (QoS), so chunk-building and render threads compete fairly with other system processes. The chunk pipeline is also tuned so that mesh uploads and occlusion queries are pipelined rather than stalling the render thread.
+
+<Tip>
+The M6 achieves 2000+ fps spinning because it has 12 GPU cores and triggers the full vGroup optimisation path. The M4 mini (10 cores) also qualifies for the full path; the MacBook Neo (5-core GPU) runs the smaller-tier path, which is why its gains are proportionally lower but still substantial — 591–638 fps spinning versus 79–81 fps vanilla.
+</Tip>

@@ -1,20 +1,60 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "mcopt: Native Metal Renderer for Minecraft on Apple Silicon"
+sidebarTitle: "Home"
+description: "mcopt is a Fabric mod that replaces Minecraft's renderer with a native Apple Metal backend, delivering up to 13× the vanilla frame rate on M1–M6 Macs."
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+mcopt is a performance mod for Minecraft: Java Edition on Apple Silicon Macs. Instead of routing draw calls through OpenGL or MoltenVK, mcopt talks directly to Apple's Metal GPU API — cutting CPU overhead and unlocking the full throughput of M-series silicon. On a Mac mini M4 with a 16-chunk render distance, it reaches over 1,200 fps where vanilla manages 156.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<Warning>
+  mcopt is **alpha software**. Expect bugs and back up your worlds before installing.
+</Warning>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Download the jar, drop it in your mods folder, and start Minecraft — no Sodium needed.
+  </Card>
+  <Card title="Verify It's Running" icon="circle-check" href="/verifying">
+    Press F3 in-game to confirm the Metal renderer is active.
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration/overview">
+    Tune profiles, enable far terrain, and override individual flags.
+  </Card>
+  <Card title="Performance Numbers" icon="gauge-high" href="/guides/performance-numbers">
+    Measured fps on M4, M6, and A18 Pro hardware across vanilla, Sodium, and mcopt.
+  </Card>
+  <Card title="Compatibility" icon="puzzle-piece" href="/guides/compatibility">
+    Which mods work alongside mcopt and how to handle conflicts.
+  </Card>
+  <Card title="All Flags Reference" icon="list" href="/reference/all-flags">
+    Every -Dmcopt.* system property in one searchable table.
+  </Card>
+</CardGroup>
+
+## What mcopt does
+
+<Steps>
+  <Step title="Replaces the renderer">
+    mcopt registers a native Metal `GpuBackend` with Minecraft's renderpearl layer. When the game starts on an Apple Silicon Mac running macOS 26+, it draws the world through Metal instead of OpenGL.
+  </Step>
+  <Step title="Runs its own terrain pipeline">
+    The default `indie` profile activates mcopt's own near-terrain renderer — compact 40-byte quad records, a GPU unit-occlusion pass, and a custom block mesher that cuts meshing CPU time by 37%.
+  </Step>
+  <Step title="Applies CPU and server optimizations">
+    Thread QoS elevation, chunk pipeline speedups (skip duplicate region writes, section-clone cache), and adaptive frame pacing ship with every profile.
+  </Step>
+  <Step title="Optionally enables far terrain">
+    Add `mcopt.lod=true` to your config to render terrain hundreds of chunks beyond the normal render distance using Metal compute shaders and NEON noise generation.
+  </Step>
+</Steps>
+
+## Requirements
+
+| Requirement | Value |
+|---|---|
+| Hardware | Apple Silicon Mac (M1 or newer) |
+| macOS | 26 or later |
+| Java | 25 (downloaded automatically by official launcher and Prism) |
+| Minecraft | Java Edition 26.3 |
+| Mod loader | Fabric Loader 0.19.5+ |
+| Sodium | **Not compatible** — remove it from your mods folder |

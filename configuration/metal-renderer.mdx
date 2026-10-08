@@ -1,0 +1,73 @@
+---
+title: "mcopt Metal Renderer and Own Terrain Pipeline"
+sidebarTitle: "Metal Renderer"
+description: "Configure mcopt's native Metal backend and its own near-terrain renderer. Key flags: mcopt.metal, mcopt.own, mcopt.own.compact, mcopt.own.mesh, and GPU unit occlusion."
+---
+
+mcopt registers a native Metal `GpuBackend` with Minecraft's renderpearl layer. When the Metal backend is active, all world rendering bypasses OpenGL (and MoltenVK) entirely — mcopt's backend creates a Metal window and Metal device, and every GPU command goes straight to Apple's driver. On top of the backend, mcopt's **own near-terrain renderer** replaces Sodium's terrain pipeline with a compact, occlusion-tested Metal pipeline. The `indie` profile enables both the backend and the own terrain pipeline by default.
+
+## Enabling / disabling the Metal backend
+
+The backend is on by default. To fall back to OpenGL/MoltenVK:
+
+```properties
+# config/mcopt.properties
+mcopt.metal=false
+```
+
+Or as a JVM flag: `-Dmcopt.metal=false`.
+
+<Warning>
+Mods that call OpenGL directly (via LWJGL or Blaze3D's GL layer) will not render while the Metal backend is active, because their calls go to a stub. Use `mcopt.metal=false` alongside those mods.
+
+**Distant Horizons exception:** mcopt automatically sets `mcopt.metal=false` when Distant Horizons is loaded with its OpenGL rendering engine selected (or when Iris is present), so DH's own renderer continues to work. An explicit `-Dmcopt.metal=true` JVM flag overrides this auto-detection.
+</Warning>
+
+### Adaptive frame pacing
+
+Enable with `mcopt.metal.paceAdapt=true` (set by `indie` and `alpha` profiles). On a laptop this produces 117–119 distinct frames/second versus 72–93 at the same hardware load, with p50 and p99 frame times lower and fps-per-GHz flat.
+
+## Own near-terrain renderer
+
+The own renderer (`mcopt.own=true`, set by `indie` and `recommended`) replaces Sodium's terrain compilation and draw path with a pipeline designed for Metal:
+
+- **Compact 40-byte quad records** — solid and cutout layer quads encoded as 40-byte records (`mcopt.own.mesh.qrec=true`), decoded by the vertex stage. Exact vs vanilla.
+- **32-quad compilation units** — sections are split into 32-quad units (`mcopt.own.run=32`) for fine-grained GPU work.
+- **Own block mesher** — replaces the vanilla/Sodium block mesher (`mcopt.own.mesh=true`). Measured meshing CPU time −37%.
+- **GPU unit occlusion** — a depth pyramid is built each frame and each 32-quad unit is tested against it before drawing (`mcopt.own.frag.uocc=true`). Units that are fully occluded are skipped. Exact vs the plain fragment path.
+- **Own translucent path** — translucent quads compiled and drawn through mcopt's own path (`mcopt.own.translucent=true`). Exact vs vanilla.
+- **Vignette no-op** — the HUD vignette pass is skipped when its source texture is exactly black, since it changes no pixel (`mcopt.own.vignetteNoop=true`).
+
+To disable just the own renderer while keeping all other mcopt optimisations active, set `mcopt.own=false` in `mcopt.properties`:
+
+```properties
+profile=indie
+mcopt.own=false
+```
+
+## Key own-renderer flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `mcopt.own` | `false` | Enable the own Metal terrain renderer (set by `indie`/`recommended` profiles) |
+| `mcopt.own.compact` | `false` | Compact vertex layout for the own renderer |
+| `mcopt.own.mesh` | `false` | Own block mesher replacing Sodium's (meshing CPU −37%) |
+| `mcopt.own.mesh.qrec` | `false` | Solid and cutout layers as compact 40-byte quad records |
+| `mcopt.own.translucent` | `false` | Own translucent rendering path |
+| `mcopt.own.frag.uocc` | `false` | GPU unit occlusion pass (depth pyramid + per-unit test) |
+| `mcopt.own.int.animOnePass` | `false` | One-pass texture animation into scratch + compute copy per atlas (8+ GPU cores) |
+| `mcopt.own.vignetteNoop` | `false` | Skip vignette pass when source is exactly black |
+| `mcopt.metal` | `true` | Enable the Metal backend (`false` = fall back to OpenGL/MoltenVK) |
+| `mcopt.metal.paceAdapt` | `false` | Adaptive frame pacing |
+
+<Tip>
+Adaptive frame pacing (`mcopt.metal.paceAdapt=true`) is enabled by both the `indie` and `alpha` profiles. On a MacBook it produces 117–119 distinct frames/s versus 72–93 without it, with lower p50 and p99 frame times.
+</Tip>
+
+## FRAPI (Fabric Renderer API) compatibility
+
+When Fabric API's renderer API (`fabric-renderer-api-v1`) is present, mcopt's own mesher drives FRAPI's block tesselator so that connected textures, emissive layers, and other FRAPI-based block models render correctly. This happens automatically. To force vanilla's `ModelBlockRenderer` even with FRAPI loaded (FRAPI models then render as their vanilla parts only), set `-Dmcopt.own.api=false`.
+
+---
+
+For the complete list of every flag the own renderer reads, see the [All Flags reference](/reference/all-flags).

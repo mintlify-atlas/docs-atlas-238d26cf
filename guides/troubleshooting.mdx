@@ -1,0 +1,172 @@
+---
+title: "Troubleshoot mcopt Installation and Runtime Issues"
+sidebarTitle: "Troubleshooting"
+description: "Fix common mcopt problems: renderer not active, startup failures on incompatible hardware, Sodium conflicts, OpenGL mod issues, and config not being read."
+---
+
+This page covers the most common problems users encounter with mcopt and how to resolve them. Expand the accordion for your issue to see causes and fixes.
+
+<AccordionGroup>
+
+<Accordion title="The debug screen (F3) shows OpenGL, not Metal 3 (mcopt)">
+
+When mcopt's Metal renderer is active, the bottom-right corner of the F3 screen reports `Metal 3 (mcopt)`. If it shows `OpenGL` instead, one of the following is preventing the Metal backend from activating:
+
+**Sodium is in the mods folder**
+
+mcopt declares a hard conflict with Sodium. If both jars are present, Fabric will refuse to start at all (you will see a crash dialog, not an OpenGL renderer). If the game did start, Sodium is not the cause — but check anyway.
+
+Fix: remove the Sodium jar from your mods folder.
+
+**`mcopt.metal=false` is set**
+
+Check `config/mcopt.properties` in your game directory (or the instance's `minecraft/config` folder in Prism) for a line reading `mcopt.metal=false`. Also check your launcher's JVM arguments for `-Dmcopt.metal=false`.
+
+Fix: remove the line from `mcopt.properties`, or change it to `mcopt.metal=true`. Remove the JVM flag if present.
+
+**Distant Horizons is set to its OpenGL renderer**
+
+If Distant Horizons is installed and its config (`config/DistantHorizons.toml`) sets `renderingEngine = "OPEN_GL"`, mcopt automatically switches its renderer off and logs a message. The game launches successfully, but in OpenGL mode.
+
+Fix: open `config/DistantHorizons.toml` and set `renderingEngine` back to `AUTO` (the default) or `BLAZE3D`, then relaunch. Alternatively, add `-Dmcopt.metal=true` as a JVM argument to override the auto-detect.
+
+**macOS version below 26**
+
+The Metal backend requires macOS 26 or later. On an older macOS version, mcopt falls back to OpenGL (or fails the platform check — see the next accordion).
+
+Fix: update macOS in **System Settings > General > Software Update**.
+
+</Accordion>
+
+<Accordion title="Minecraft won't start — Fabric shows a crash dialog about mcopt">
+
+mcopt checks the platform on every launch before loading any of its own classes. If the check fails, it shows a Fabric error dialog with a title line that reads:
+
+> **mcopt can't run on this computer.**
+
+The details area gives you the exact reason and how to fix it. The three possible causes are:
+
+**Not an Apple Silicon Mac**
+
+If you are on an Intel Mac, or on a non-Mac machine (Linux, Windows), the dialog will say:
+
+> It needs an Apple Silicon Mac (M1 or newer) with macOS 26 or later, and this computer runs [OS name].
+
+mcopt does not support Intel Macs or non-Mac platforms. Remove the mcopt jar from the mods folder to play without it.
+
+**Intel Java (or Rosetta)**
+
+If you are on an Apple Silicon Mac but running an Intel (x86_64) JDK — possibly via Rosetta — the dialog will say:
+
+> It needs an Apple Silicon Mac (M1 or newer) and an Apple Silicon (arm64) Java, and this Java is x86_64.
+
+Fix: install an arm64 JDK. The official Minecraft launcher and Prism Launcher both download an arm64 Java 25 automatically for Minecraft 26.3.
+
+**macOS version below 26**
+
+If your macOS is older than 26, the dialog will say:
+
+> It needs macOS 26 or later, and this Mac runs macOS [version]. Update macOS in System Settings > General > Software Update.
+
+Fix: update macOS to version 26 or later.
+
+---
+
+To play on the machine without mcopt until you can resolve the issue, remove the mcopt jar from the mods folder.
+
+</Accordion>
+
+<Accordion title="Fabric refuses to start saying mod conflicts">
+
+If the Fabric error dialog mentions a mod conflict between mcopt and Sodium, both jars are in your mods folder at the same time. mcopt declares this conflict explicitly in its mod metadata:
+
+```json
+"breaks": { "sodium": "*" }
+```
+
+Fabric treats this as a hard incompatibility and will not launch with both present.
+
+Fix: remove the Sodium jar from your mods folder. mcopt includes its own terrain renderer since 0.3.0-alpha.1, so Sodium is no longer needed — and cannot be used alongside mcopt.
+
+</Accordion>
+
+<Accordion title="A mod that used to draw things isn't drawing them">
+
+The mod likely calls OpenGL directly using LWJGL or another OpenGL binding. When mcopt's Metal backend is active, there is no live OpenGL context. Any direct OpenGL draw calls silently produce nothing.
+
+Fix: add the following line to `config/mcopt.properties` in your game directory:
+
+```properties
+mcopt.metal=false
+```
+
+This reverts mcopt's renderer to OpenGL while keeping its other optimisations (thread QoS, chunk pipeline tuning, startup improvements). You will lose the Metal-backend fps gains, but the mod in question will draw correctly again.
+
+If you're not sure which mod is responsible, disable mods one by one and relaunch until the drawing issue disappears to identify the culprit.
+
+</Accordion>
+
+<Accordion title="config/mcopt.properties wasn't written on first launch">
+
+mcopt writes `config/mcopt.properties` on first launch, but only if the file does not already exist. If the file is missing after a first launch:
+
+**Permissions issue**
+
+If the game directory's `config/` folder is not writable, mcopt logs a warning and continues without writing the file:
+
+```
+[mcopt] profile: can't write <path>/config/mcopt.properties: <reason>
+```
+
+Check the permissions on your game directory. In Finder, right-click the folder, choose **Get Info**, and verify your user has Read & Write permission. In Prism Launcher, make sure the instance has a writable `minecraft/config` folder.
+
+**The file already exists**
+
+If `config/mcopt.properties` was present from a previous run (or copied from another instance), mcopt reads it rather than overwriting it. Check whether the file exists before concluding it wasn't written.
+
+</Accordion>
+
+<Accordion title="Far terrain looks choppy or causes fps drops">
+
+Far terrain (`mcopt.lod=true`) is experimental and opt-in. It is most effective on Macs with 10 or more GPU cores. On smaller GPUs it costs most of the fps gains mcopt otherwise delivers.
+
+**5-core GPU Macs (e.g. MacBook Neo / A18 Pro)**
+
+Far terrain is not recommended on a 5-core GPU Mac unless you have significant fps headroom. The experimental path is not tuned for smaller GPU configurations.
+
+**Disabling far terrain**
+
+Remove the `mcopt.lod=true` line from `config/mcopt.properties` (or comment it out with `#`). Relaunch Minecraft.
+
+**Improving far terrain smoothness**
+
+If you want to keep far terrain and reduce choppiness, set the full seamless far-terrain options in `config/mcopt.properties`:
+
+```properties
+mcopt.lod=true
+mcopt.lod.fade=instant
+mcopt.lod.handoff=drawn
+mcopt.lod.prio=screen
+mcopt.lod.publish=gpu
+```
+
+Or, simply set `profile=recommended` to apply the measured, accepted set of options automatically.
+
+</Accordion>
+
+<Accordion title="I want to report a bug">
+
+Before opening an issue, please collect the following information:
+
+- **mcopt version** — visible in the F3 screen or in Fabric's mod list
+- **macOS version** — System Settings > General > About
+- **GPU model** — System Settings > General > About (e.g. "Apple M4, 10-core GPU")
+- **Fabric Loader version** — shown in the Fabric installer or in `fabric.mod.json`
+- **Full `latest.log`** — found in `~/Library/Application Support/minecraft/logs/` (or the instance's `minecraft/logs/` in Prism)
+- **Steps to reproduce** — what you did, what you expected, and what happened instead
+
+Open an issue at [https://github.com/noahdunnagan/mcopt/issues](https://github.com/noahdunnagan/mcopt/issues). Include the log as a file attachment rather than pasted inline.
+
+</Accordion>
+
+</AccordionGroup>

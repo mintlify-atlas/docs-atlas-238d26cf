@@ -1,0 +1,76 @@
+---
+title: "mcopt: Native Metal Renderer for Minecraft on Apple Silicon"
+sidebarTitle: "Introduction"
+description: "mcopt is a Fabric mod that replaces Minecraft's OpenGL renderer with a native Apple Metal backend, delivering up to 13× vanilla frame rates on M1–M6 Macs."
+---
+
+mcopt is a Fabric mod for Minecraft: Java Edition that replaces Minecraft's default OpenGL-based renderer with a native Apple Metal backend purpose-built for Apple Silicon Macs. Instead of routing every draw call through MoltenVK — Apple's OpenGL-over-Metal translation layer, which adds significant overhead on M-series chips — mcopt talks directly to the Metal GPU API, brings its own terrain renderer, and applies a suite of CPU, chunk-pipeline, and thread quality-of-service optimizations. The result is frame rates that range from roughly 4× to 13× vanilla on tested M1–M6 hardware. mcopt targets players and content creators on Apple Silicon Macs who want the highest possible frame rate out of Minecraft without compromising world compatibility.
+
+<Warning>
+  **mcopt is in alpha.** Expect bugs and rough edges. Back up your worlds before
+  installing. Do not use mcopt as your only copy of a world you care about.
+</Warning>
+
+## The problem mcopt solves
+
+Minecraft: Java Edition uses OpenGL for all rendering. On Apple Silicon Macs, OpenGL is not native — Apple deprecated OpenGL in macOS 10.14 and the runtime translates every GL call through MoltenVK before it reaches the GPU. That translation layer adds CPU overhead per draw call and prevents the GPU from receiving commands in the most efficient format Metal understands. The gap between what the hardware can do and what Minecraft actually delivers is large: a Mac mini M4 with a 10-core GPU scores roughly 150 fps vanilla but well over 1 200 fps with mcopt.
+
+## How mcopt works
+
+mcopt operates at three levels:
+
+**Native Metal renderer.** mcopt registers a native `GpuBackend` implementation that bypasses OpenGL and MoltenVK entirely. It also ships its own terrain renderer that builds and submits Metal command buffers directly, replacing Minecraft's chunk-rendering pipeline.
+
+**CPU and chunk pipeline.** A collection of Mixin patches tightens the chunk-compilation pipeline, reduces redundant work in the block-light and sky-light maps, and improves chunk I/O throughput.
+
+**Thread quality of service (QoS).** mcopt promotes render and worker threads to higher macOS QoS classes so the OS scheduler gives them more CPU time relative to background tasks, reducing frame-time variance.
+
+All three pillars are on by default when the `indie` profile is active. You can turn individual switches off, or revert to vanilla's renderer entirely, via `config/mcopt.properties`.
+
+## Requirements
+
+| Requirement | Value |
+|---|---|
+| Hardware | Apple Silicon Mac (M1 or newer) |
+| Operating system | macOS 26 or later |
+| Java | Java 25 (downloaded automatically by the official launcher and Prism for Minecraft 26.3) |
+| Minecraft | Java Edition 26.3 |
+| Fabric Loader | 0.19.5 or newer |
+| Sodium | **Not compatible** — remove Sodium from the mods folder |
+
+<Note>
+  Fabric API is **not** required by mcopt. Keep it in your mods folder only if
+  another mod you use depends on it.
+</Note>
+
+## Experimental: far terrain (LOD)
+
+mcopt includes an opt-in far-terrain renderer (`mcopt.lod=true` in `config/mcopt.properties`). It is off by default and intended for Macs with 10 or more GPU cores. On smaller GPUs it costs most of the frame-rate gain, so leave it disabled unless you have a large-GPU Mac mini or Mac Pro.
+
+## Compatibility notes
+
+- **Sodium** — mcopt declares `"breaks": { "sodium": "*" }` in its Fabric metadata and will refuse to start alongside Sodium. Remove Sodium from your mods folder.
+- **Mods that require Sodium** (for example Better Block Entities, Iris) cannot be used with this build of mcopt.
+- **Mods that call OpenGL directly** cannot draw on the Metal backend. Add `mcopt.metal=false` to `config/mcopt.properties` to switch mcopt's renderer off while keeping its other optimizations.
+- **Distant Horizons** runs on the Metal backend next to mcopt's own terrain. If Distant Horizons is set to its OpenGL renderer, mcopt automatically switches its own renderer off for compatibility.
+
+## Explore the documentation
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Step-by-step guide to getting mcopt installed with Fabric on macOS 26, using
+    either the official Minecraft launcher or Prism Launcher.
+  </Card>
+  <Card title="Configuration overview" icon="sliders" href="/configuration/overview">
+    All settings in `config/mcopt.properties` explained: profiles, individual
+    feature flags, and how command-line properties interact with the config file.
+  </Card>
+  <Card title="Performance numbers" icon="chart-line" href="/guides/performance-numbers">
+    Measured frame rates across Mac mini M4, MacBook Neo (A18 Pro), and Mac mini
+    M6, compared with vanilla and Sodium.
+  </Card>
+  <Card title="Compatibility guide" icon="puzzle-piece" href="/guides/compatibility">
+    Which mods work alongside mcopt, which don't, and how to work around common
+    conflicts.
+  </Card>
+</CardGroup>

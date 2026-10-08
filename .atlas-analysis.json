@@ -1,0 +1,95 @@
+{
+  "projectType": "general",
+  "projectName": "mcopt",
+  "projectDescription": "A Fabric mod for Minecraft: Java Edition on Apple Silicon Macs that replaces the default renderer with a native Metal backend, delivering dramatically higher frame rates alongside CPU, chunk pipeline, and startup optimizations.",
+  "theme": "almond",
+  "primaryColor": "#6c6353",
+  "lightColor": "#363224",
+  "darkColor": "#cabca2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "verifying"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/overview",
+              "configuration/profiles",
+              "configuration/metal-renderer",
+              "configuration/far-terrain",
+              "configuration/cpu-and-chunk",
+              "configuration/thread-qos"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/performance-numbers",
+              "guides/compatibility",
+              "guides/troubleshooting"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/all-flags",
+              "reference/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Native Apple Metal rendering backend replacing OpenGL/MoltenVK for Minecraft: Java Edition",
+    "Up to 8–13× the vanilla frame rate on Apple Silicon (M1 and newer)",
+    "Own near-terrain renderer (mcopt.own) with compact vertices, GPU unit occlusion, and our own block mesher",
+    "Experimental far-terrain renderer (LOD) using Metal compute shaders, built-in terrain noise on NEON",
+    "Thread QoS elevation for the render and server threads (measured +17% fps, -57% MSPT p99 on laptop)",
+    "Chunk pipeline optimizations: skip duplicate region writes, fast palette meshing, clone cache",
+    "Adaptive frame pacing for lower latency on laptops",
+    "Edge-cap: prevents render-distance gaps when entering new terrain",
+    "Layered profile system (indie / alpha / recommended / none) with per-flag overrides",
+    "Distant Horizons compatibility (Blaze3D renderer path)"
+  ],
+  "publicApiSurface": [
+    "mcopt.properties config file (~/.minecraft/config/mcopt.properties)",
+    "profile= key (indie | alpha | recommended | none)",
+    "-Dmcopt.metal=true|false (enable/disable the Metal renderer)",
+    "-Dmcopt.own=true|false (enable/disable the own near-terrain renderer)",
+    "-Dmcopt.lod=true|false (enable/disable far terrain)",
+    "-Dmcopt.lod.render=mesh (far terrain render path)",
+    "-Dmcopt.lod.fade=instant (seamless LOD handoff)",
+    "-Dmcopt.lod.prio=screen (far terrain streaming priority)",
+    "-Dmcopt.lod.publish=gpu (GPU-side far terrain publishing)",
+    "-Dmcopt.lod.nativeNoise=neon (NEON noise generation)",
+    "-Dmcopt.lod.yield=missing:0 (LOD generation yield policy)",
+    "-Dmcopt.qos=on|off (thread QoS role management)",
+    "-Dmcopt.qos.render|server|mesh|cull|worker|io=CLASS",
+    "-Dmcopt.chunk.saveSkip=true (skip byte-identical region writes)",
+    "-Dmcopt.chunk.mesh=all,biome (fast mesher paths)",
+    "-Dmcopt.chunk.clones=4096 (section-clone cache size)",
+    "-Dmcopt.chunk.poi=true|false (POI search optimization)",
+    "-Dmcopt.cpu.fence=true (no mid-frame GPU wait)",
+    "-Dmcopt.cpu.texelCache=true (texel buffer view cache)",
+    "-Dmcopt.cpu.model=true (entity model compile reuse)",
+    "-Dmcopt.cpu.lists=true (render-list region cache)",
+    "-Dmcopt.edgeCap=true (fps cap at 2× refresh near edges)",
+    "-Dmcopt.metal.paceAdapt=true (adaptive frame pacing)",
+    "-Dmcopt.alloc.lightMap=true (light engine snapshot)",
+    "-Dmcopt.startup.narrator=lazy (deferred narrator init)",
+    "-Dmcopt.own.compact=true (compact vertex format)",
+    "-Dmcopt.own.mesh=true (own block mesher)",
+    "-Dmcopt.own.translucent=true (own translucent path)",
+    "-Dmcopt.own.frag.uocc=true (GPU unit occlusion)"
+  ]
+}

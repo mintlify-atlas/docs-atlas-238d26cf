@@ -1,0 +1,84 @@
+---
+title: "Verify mcopt Is Running in Minecraft"
+sidebarTitle: "Verifying"
+description: "How to confirm the mcopt Metal renderer is active after installation using Minecraft's debug screen and the config file written on first launch."
+---
+
+After installing mcopt, it only takes a few seconds to confirm that the mod loaded and that the native Metal renderer is active. There are three independent ways to check: Minecraft's debug overlay (F3), the fps counter mcopt adds to the HUD, and the `mcopt.properties` config file written to disk on the first launch. If any check shows something unexpected, the troubleshooting notes at the bottom of this page will help you find the cause.
+
+## Primary check: the F3 debug overlay
+
+Load into a world, then press **F3** (or **fn + F3** on a Mac keyboard with standard function-key behaviour). The debug overlay fills the screen with technical information. Look at the **bottom-right corner** — when mcopt's Metal renderer is active you will see:
+
+```
+Metal 3 (mcopt)
+```
+
+This line is printed by mcopt's `MetalBackend` and confirms that the native Metal GPU backend replaced Minecraft's default OpenGL/MoltenVK backend.
+
+Press F3 again (or fn + F3) to dismiss the overlay.
+
+## Secondary check: the fps counter
+
+mcopt adds a frame-rate counter to the **top-left corner** of the screen. It is visible during normal play and is hidden together with the rest of the HUD when you press **F1** (fn + F1) or **F3** (fn + F3). If you can see a rapidly updating fps number in the top-left corner, the mod is loaded and running.
+
+## Config file check
+
+On its very first launch mcopt writes a settings file to disk. The presence of this file is a reliable sign that the mod's pre-launch entrypoint ran successfully.
+
+**Official launcher:**
+```bash
+~/Library/Application Support/minecraft/config/mcopt.properties
+```
+
+**Prism Launcher** (replace `<InstanceName>` with your instance's name):
+```bash
+~/Library/Application Support/PrismLauncher/instances/<InstanceName>/minecraft/config/mcopt.properties
+```
+
+Open the file in any text editor. A fresh installation looks exactly like this:
+
+```properties
+# mcopt settings. Written on first launch; edit freely.
+#
+# The indie profile: mcopt's own terrain renderer on Apple Metal (no Sodium), plus measured startup and
+# thread-priority options. To turn all of it off (vanilla's renderer), change the next line to:  profile=none
+profile=indie
+#
+# Single switches win over the profile, e.g. our renderer off but the rest on:
+#mcopt.own=false
+# Far terrain (EXPERIMENTAL, off by default; for Macs with 10 or more GPU cores): remove the # below.
+#mcopt.lod=true
+```
+
+<Tip>
+  **What `profile=indie` means:** the `indie` profile activates mcopt's own
+  terrain renderer on Apple Metal, along with the measured startup and
+  thread-priority optimizations. This is the recommended default for all
+  supported hardware.
+
+  To revert to vanilla's OpenGL renderer while keeping mcopt loaded, change
+  that line to `profile=none` and restart Minecraft. The other optimizations
+  (CPU pipeline, thread QoS) remain active; only the own terrain renderer and
+  Metal backend are turned off. To disable mcopt's renderer alone without
+  touching the other settings, uncomment `#mcopt.own=false` instead.
+</Tip>
+
+## Troubleshooting
+
+**The debug screen shows `OpenGL` instead of `Metal 3 (mcopt)`.**
+
+This is the most common issue and usually has one of two causes:
+
+1. **Sodium is still in the mods folder.** mcopt declares `"breaks": { "sodium": "*" }` in its Fabric metadata, so Fabric should have refused to start — but if you see OpenGL, double-check that no `sodium-*.jar` is present in your mods folder. Remove it and relaunch.
+2. **You are not on macOS 26 or later.** mcopt requires macOS 26. Open **Apple menu → About This Mac** and confirm the version. If you are on an older release, update macOS via **System Settings → General → Software Update**.
+
+**The `mcopt.properties` file was not created.**
+
+The file is written during the Fabric pre-launch phase. If it does not exist after a launch, the mod's pre-launch entrypoint did not run, which usually means Fabric Loader did not load the mod at all. Check the Minecraft log (`logs/latest.log`) for any error messages mentioning `mcopt` or `fabric`.
+
+**The game stopped at launch with a Fabric error dialog.**
+
+If you see a dialog that says something like "mcopt can't run on this computer", your hardware or macOS version does not meet the requirements. The dialog's detail area explains the specific problem (not macOS, Intel architecture, or macOS older than 26) and tells you to remove the mcopt jar to play on that machine.
+
+For more help, see the full [Troubleshooting guide](/guides/troubleshooting).

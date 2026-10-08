@@ -1,0 +1,58 @@
+---
+title: "CPU, Chunk Pipeline, and Startup Optimizations in mcopt"
+sidebarTitle: "CPU & Chunk"
+description: "mcopt applies chunk pipeline speedups, startup optimizations, memory improvements, and an edge-cap to prevent render-distance gaps. All active in the indie profile."
+---
+
+Beyond the Metal renderer, mcopt applies a set of CPU-side and chunk pipeline optimisations that are active across all profiles (including `alpha`). These cover chunk I/O, section-clone caching, mesher paths, the light engine, render lists, entity models, and game startup. None of these flags require the own renderer or the Metal backend; they compose with vanilla's renderer too.
+
+<Note>
+All flags described on this page are exact (behaviour-identical to vanilla) unless noted otherwise.
+</Note>
+
+## Chunk pipeline flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `mcopt.chunk.saveSkip` | `false` | Skip region writes where the chunk data is byte-identical to what the file already holds (ignoring the `LastUpdate` stamp). Avoids unnecessary disk I/O on auto-save |
+| `mcopt.chunk.mesh` | — | Mesher fast paths. `all,biome` enables all Sodium fast paths including biome blend |
+| `mcopt.chunk.clones` | `0` | Sodium section-clone cache size. `4096` = 4096-entry cache (omitted on the small tier in the `alpha` profile — see [Profiles](/configuration/profiles)) |
+| `mcopt.chunk.clonesCleanup` | `false` | Per-frame cache expiry walk stops at the first entry that has not expired (entries are in last-use order). Required alongside `clones=4096` |
+| `mcopt.chunk.poi` | `false` | POI (Point of Interest) search implemented as tight loops instead of per-pick overhead. Same results in the same order |
+| `mcopt.chunk.ticks` | `false` | Chunk ticking without per-pick overhead. Same random ticks in the same order |
+| `mcopt.chunk.chunkGet` | `false` | A chunk's section index offset computed once per call instead of per block access |
+
+## CPU and render flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `mcopt.cpu.fence` | `false` | Name the fence after each submit so the render thread doesn't stall waiting for a GPU signal mid-frame |
+| `mcopt.cpu.texelCache` | `false` | Cache texel buffer views over the same memory, avoiding redundant allocations |
+| `mcopt.cpu.model` | `false` | Entity model compile reuse across frames |
+| `mcopt.cpu.lists` | `false` | Render-list walk with a region cache (measured −9% of `readRenderListFromTree` on the Neo) |
+| `mcopt.cpu.cullRecover` | `false` | Re-run a cull that was scheduled while the section graph was being updated (fixes a Sodium lost-update) |
+
+## Memory and light engine
+
+| Flag | Default | Description |
+|---|---|---|
+| `mcopt.alloc.lightMap` | `false` | The light engine publishes a read-only snapshot of its section map instead of copying it on every update. Reduces allocations and GC pressure |
+
+## Edge cap
+
+`mcopt.edgeCap=true` caps the frame rate at 2× the display's refresh rate while the integrated server is generating new terrain within RD+32 chunks of the player. Without the cap, at 1000+ fps on a 5K laptop, the GPU's power and heat budget crowds out the world generator, and in fast flight over new terrain the render-distance edge goes missing. The cap kicks in before the edge goes empty — generation reaches out past the render distance, so the signal arrives early.
+
+- Active only in single-player and LAN (no integrated server in multiplayer = never triggered).
+- The cap is held for 1 second after the last detected generation event (`mcopt.edgeCap.holdMs` to change).
+- The "within RD+32 chunks" margin is configurable via `mcopt.edgeCap.margin`.
+
+## Startup flags
+
+| Flag | Values | Description |
+|---|---|---|
+| `mcopt.startup.narrator` | `lazy` | Create the macOS speech channel on the narrator's first use instead of at startup. Saves ~0.47 s on a MacBook Neo |
+| `mcopt.startup.crashPreload` | `async` | Build the warm-up crash report (which runs an external command) on a daemon thread. The memory reserve is still allocated first, on the main thread. Saves ~0.43 s on the Neo |
+| `mcopt.startup.blockCache` | `parallel` | Compute block-state caches (shapes, light, sturdy faces) in parallel after the registry loop instead of serially |
+| `mcopt.startup.fadeMs` | integer | Loading overlay fade-out duration in ms (vanilla default: 1000). This is a visible UI change, not a game-logic one |
+
+All startup flags produce the same objects and values as vanilla — they only change *when* or *how concurrently* those objects are created.

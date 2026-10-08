@@ -1,0 +1,67 @@
+---
+title: "Thread QoS Configuration in mcopt"
+sidebarTitle: "Thread QoS"
+description: "mcopt elevates the render and server thread QoS classes on macOS to improve frame rates and reduce server tick latency. Configure with mcopt.qos flags."
+---
+
+macOS schedules threads by Quality-of-Service class. A thread at a higher class gets more CPU time and lower scheduling latency. mcopt uses the native `pthread_set_qos_class_self_np` API to raise critical Minecraft threads as they start. Measured on the test Macs: on a MacBook Neo in a busy area, raising the render thread to `user-interactive` and the server thread to `user-initiated` produced **+17% fps, +63% 1%-lows, and −25% MSPT**. On a hot laptop under thermal pressure, MSPT p99 dropped 57–71%.
+
+## Default behaviour
+
+QoS is **on by default** (`mcopt.qos=on`). Without any explicit configuration:
+
+- The **render thread** is elevated to `user-interactive` (class `0x21`).
+- The **integrated server thread** is elevated to `user-initiated` (class `0x19`).
+- Worker, mesh, cull, and IO threads are left at their default macOS class.
+
+The mesh builders are deliberately left alone: raising them has been measured to hurt 0.1%-lows on laptops.
+
+## Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `mcopt.qos` | `on` | Enable (`on`) or disable (`off`) all QoS role assignments |
+| `mcopt.qos.render` | `interactive` | QoS class for the render thread |
+| `mcopt.qos.server` | `initiated` | QoS class for the integrated server thread |
+| `mcopt.qos.mesh` | — | QoS class for Sodium's chunk builder threads (not set by default) |
+| `mcopt.qos.cull` | — | QoS class for Sodium's cull thread (not set by default) |
+| `mcopt.qos.worker` | — | QoS class for Worker-Main threads (not set by default) |
+| `mcopt.qos.io` | — | QoS class for IO-Worker threads (not set by default) |
+
+## QoS class names
+
+Use these values for the per-role flags:
+
+| Class name | Description |
+|---|---|
+| `interactive` | `user-interactive` — highest priority, for UI and render threads |
+| `initiated` | `user-initiated` — second highest, for server and foreground work |
+| `default` | macOS default class |
+| `utility` | Utility — for background tasks that run periodically |
+| `background` | Background — lowest priority |
+| `none` | Remove the QoS assignment for this role (leave it at its inherited class) |
+
+## Examples
+
+```properties
+# Turn QoS off entirely
+mcopt.qos=off
+```
+
+```properties
+# Keep defaults but also elevate worker threads
+mcopt.qos.worker=initiated
+```
+
+```properties
+# Remove the render thread elevation (leave at macOS default)
+mcopt.qos.render=none
+```
+
+<Note>
+The mesh builders are deliberately left at their default class. Raising them has been measured to hurt 0.1%-lows on laptops.
+</Note>
+
+<Tip>
+QoS only affects the threads running in this JVM. The integrated server thread (`server` role) is relevant only in single-player and LAN. On a remote dedicated server there is no render thread to elevate — the server-side flags still apply to the server thread running there.
+</Tip>

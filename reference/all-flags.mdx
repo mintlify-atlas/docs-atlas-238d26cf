@@ -1,0 +1,232 @@
+---
+title: "All mcopt Configuration Flags Reference"
+sidebarTitle: "All Flags"
+description: "Complete reference for every mcopt JVM system property and mcopt.properties key, grouped by subsystem with their default values and descriptions."
+---
+
+Every mcopt setting is a JVM system property that can be set in two ways: in `config/mcopt.properties` (the key without the `-D` prefix) or as a `-Dmcopt.*` argument in the launcher's JVM arguments. For example, `mcopt.own=true` in the properties file is equivalent to passing `-Dmcopt.own=true` in JVM arguments. The special `profile` key (without the `mcopt.` prefix) is only valid in `config/mcopt.properties` or as `-Dmcopt.profile=` on the command line.
+
+<Note>
+**Precedence order:** JVM command-line flags (`-Dmcopt.*`) **>** `config/mcopt.properties` **>** the active profile. A flag set on the command line is never overwritten by the properties file or the profile. A key in `mcopt.properties` wins over the profile's value for that key.
+</Note>
+
+<Accordion title="Profile & Core">
+
+These flags control which preset profile is active and the top-level Metal renderer switches. The `profile` key selects a bundled set of defaults; individual flags in `mcopt.properties` or on the command line always win over the profile.
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `profile` | `indie`, `alpha`, `recommended`, `none` | `indie` | Active preset profile. Set as `profile=NAME` in `config/mcopt.properties`, or as `-Dmcopt.profile=NAME` on the command line. `none` disables all profile settings (vanilla renderer). |
+| `mcopt.metal` | `true` / `false` | `true` | Enable the native Metal rendering backend. Set to `false` to fall back to vanilla's OpenGL path while keeping all other mcopt optimizations. |
+| `mcopt.metal.paceAdapt` | `true` / `false` | `false` | Adaptive frame pacing. Enabled by the `indie` and `alpha` profiles. Measured to produce 117–119 distinct frames/s vs 72–93 on a laptop, with lower p50/p99 frame times. |
+| `mcopt.edgeCap` | `true` / `false` or integer | `false` | Cap the frame rate at 2× the display refresh rate (or a fixed integer fps) while the integrated server is generating terrain within RD + 32 chunks of the player. Prevents the render-distance edge going empty in fast flight over new terrain. Singleplayer and LAN host only; no effect in multiplayer. |
+
+</Accordion>
+
+<Accordion title="Own Near-Terrain Renderer (mcopt.own.*)">
+
+These flags control mcopt's own Metal terrain renderer, which replaces vanilla's Blaze3D terrain path. The `indie` profile enables the full set. Individual flags can be used to tune or selectively enable subsystems.
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `mcopt.own` | `true` / `false` | `false` | Enable the own Metal terrain renderer. The `indie` profile sets this to `true`. |
+| `mcopt.own.compact` | `true` / `false` | `false` | Compact 40-byte vertex records in GPU buffers. |
+| `mcopt.own.run` | integer | — | Compilation unit size in quads. The `indie` profile uses `32`. |
+| `mcopt.own.translucent` | `true` / `false` | `false` | Own translucent rendering path, replacing vanilla's translucent sort. |
+| `mcopt.own.mesh` | `true` / `false` | `false` | Own block mesher on vanilla's models (exact vs vanilla; measured at −37% meshing CPU). |
+| `mcopt.own.mesh.region` | `true` / `false` | `false` | Region copy for the own mesher. |
+| `mcopt.own.mesh.tint` | `true` / `false` | `false` | Tint handling in the own mesher. |
+| `mcopt.own.mesh.ao` | `true` / `false` | `false` | Ambient occlusion in the own mesher. |
+| `mcopt.own.mesh.exactPos` | `true` / `false` | `false` | Exact compact positions (off-grid coordinates by table code; picture within 0 px of vanilla). |
+| `mcopt.own.mesh.qrec` | `true` / `false` | `false` | Solid and cutout layers stored as 40-byte quad records decoded by the vertex stage (exact). |
+| `mcopt.own.mesh.tsorted` | `true` / `false` | `false` | Translucent quads stored in draw order (exact; M6 flight +1.3%, mini spin +2.3%). |
+| `mcopt.own.mesh.tcull` | `true` / `false` | `false` | Cull back-facing translucent quads on the CPU before uploading (exact). |
+| `mcopt.own.mesh.tfrustum` | `true` / `false` | `false` | Cull translucent sections whose vertex box is wholly outside a frustum side plane (exact). |
+| `mcopt.own.mesh.prefill` | `true` / `false` | `false` | Pre-fill mesh buffers. Enabled by the `indie` profile. |
+| `mcopt.own.mesh.thalf` | `true` / `false` | `false` | Rich/lean half-colour split for translucent quads. Used alongside `mcopt.own.mesh.tsorted`. |
+| `mcopt.own.mesh.order` | `cell`, default | — | Unit draw order within a section. The `indie` profile sets `cell`. |
+| `mcopt.own.mesh.cell` | integer | — | Cell size in blocks for unit ordering. The `indie` profile uses `8`. |
+| `mcopt.own.mesh.subbox` | `true` / `false` | `false` | Sub-boxes within each unit for tighter occlusion (used with `mcopt.own.frag.msub`). |
+| `mcopt.own.mesh.bucketClass` | `suffix`, default | — | Bucket classification for size-class ordering. The `indie` profile sets `suffix`. |
+| `mcopt.own.mesh.frapiRegion` | `true` / `false` | `false` | FRAPI region copy for the own mesher (exact; meshing −22% per section when Fabric API is present). |
+| `mcopt.own.frag.uocc` | `true` / `false` | `false` | GPU unit occlusion: tests units against a HiZ depth pyramid before drawing. |
+| `mcopt.own.frag.sizes` | `true` / `false` | `false` | Fragment cost size classes (8-quad buckets). |
+| `mcopt.own.frag.lean` | `true` / `false` | `false` | Lean vertex stage. |
+| `mcopt.own.frag.box` | `true` / `false` | `false` | Tighter bounding boxes per unit. |
+| `mcopt.own.frag.half` | `true` / `false` | `false` | Colour varying passed as `half4` (within 1 LSB of vanilla's picture; accepted). |
+| `mcopt.own.frag.fine` | integer | — | Fine occlusion level. `3` = full fine occlusion. Used with `mcopt.own.frag.uocc`. |
+| `mcopt.own.frag.pipe` | `true` / `false` | `false` | Occlusion pipeline (previously visible units drawn first). |
+| `mcopt.own.frag.msub` | `true` / `false` | `false` | Sub-boxes for unit occlusion queries. |
+| `mcopt.own.frag.splitNear` | integer | — | Phase A split point in blocks. The `indie` profile uses `216`. |
+| `mcopt.own.frag.testLate` | `true` / `false` | `false` | Late occlusion test (after phase A's later part). |
+| `mcopt.own.frag.testFast` | `true` / `false` | `false` | Fast occlusion test path. |
+| `mcopt.own.frag.testGather` | `true` / `false` | `false` | Gathered occlusion test (reads pyramid by gather). |
+| `mcopt.own.frag.pyrSkip` | integer | — | Number of pyramid base levels to skip when building the HiZ pyramid (one level coarser; test only gets more conservative; exact). |
+| `mcopt.own.frag.uoccMaxMp` | float | — | Above this many megapixels, disable unit occlusion (those GPUs draw faster without it). |
+| `mcopt.own.frag.uoccMaxMpCores` | integer | — | GPU core threshold for `uoccMaxMp`; the `indie` profile gates this at 12 cores. |
+| `mcopt.own.frag.a2Exact` | `true` / `false` | `false` | Phase A2 drawn with exactly its quads (no padding). The `indie` profile enables on GPUs of ≤ 7 cores (Neo: flight +5.1%, late +9%). |
+| `mcopt.own.frag.a2ExactMaxCores` | integer | — | GPU core ceiling for `a2Exact`. |
+| `mcopt.own.frag.tieClose` | `true` / `false` | `false` | Promotion closure for identical-corner solid/cutout ties (fixes one-frame grass overlay loss; exact). |
+| `mcopt.own.frag.vGroup` | integer | — | Phase A class draws grouped (`2^N` units per draw; exact). The `indie` profile sets `2` on GPUs of ≥ 12 cores. |
+| `mcopt.own.frag.vGroupMinCores` | integer | — | GPU core floor for `vGroup`. |
+| `mcopt.own.tl.a1Split` | integer | — | Phase A's first part split into two render passes at this list-size threshold (exact). The `indie` profile sets `30`. |
+| `mcopt.own.tl.a1SplitMaxCores` | integer | — | GPU core ceiling for `a1Split`. |
+| `mcopt.own.tl.a1SplitMinCores` | integer | — | GPU core floor for `a1Split`. |
+| `mcopt.own.hizTop` | `true` / `false` | `false` | Build the top levels of the HiZ depth pyramid in a single threadgroup. |
+| `mcopt.own.hizGather` | `true` / `false` | `false` | Build HiZ mip 0 using gather reads. |
+| `mcopt.own.vignetteNoop` | `true` / `false` | `false` | Skip the HUD vignette pass when its source texture is exactly black (it would change no pixel; exact). |
+| `mcopt.own.int.animOnePass` | `true` / `false` | `false` | One-pass texture animation: a tick's animation draws into a scratch buffer, then one compute copy per atlas into its mips (exact). Enabled on GPUs with ≥ 8 cores in the `indie` profile. |
+| `mcopt.own.int.atlasWrite` | `true` / `false` | `false` | Disable atlas lossless compression to support one-pass animation (`animOnePass`). |
+| `mcopt.own.int.animMinCores` | integer | — | Minimum GPU core count to enable `animOnePass`. The `indie` profile sets `8`. |
+| `mcopt.own.int.seam` | `true` / `false` | `false` | Far terrain hand-off from the own terrain renderer. Only active when `mcopt.lod=true`. |
+| `mcopt.own.int.lifeFix` | `true` / `false` | `false` | A compile task cancelled by a reset or a newer compile does not publish its stale mesh. |
+| `mcopt.own.int.cullR` | `true` / `false` | `false` | 8-lane culling pass. |
+| `mcopt.own.int.cullW` | integer | — | Cull lanes per section. The `indie` profile sets `8`. |
+| `mcopt.own.int.preEarly` | `true` / `false` | `false` | Start the cull command buffer as soon as it is encoded, before the frame's other work. |
+| `mcopt.own.int.lists` | `true` / `false` | `false` | Skip vanilla's per-frame section draw lists while its buffers hold no terrain (exact, verified). |
+| `mcopt.own.int.visible` | `true` / `false` | `false` | Block entities and the translucent list taken from the visible-sections set, in vanilla's order (exact, verified). |
+| `mcopt.own.int.compileRegionDrop` | `true` / `false` | `false` | Drop a section's region copy after its compile completes (~78 MB of heap saved vs vanilla's behaviour; no change in output). |
+| `mcopt.own.arena.preSize` | `true` / `false` | `false` | Pre-size the GPU arena for RD 16, reserving the measured backing on small GPUs only. |
+| `mcopt.own.arena.preSizeMaxCores` | integer | — | Maximum GPU core count for arena pre-sizing. The `indie` profile sets `8` so larger Macs retain room to grow. |
+| `mcopt.own.api` | `true` / `false` | `true` | Use FRAPI (Fabric Renderer API) for block tesselation when it is loaded. Set to `false` to use vanilla's `ModelBlockRenderer` even with Fabric API present (FRAPI models then render as their vanilla parts only). |
+
+</Accordion>
+
+<Accordion title="Far Terrain (mcopt.lod.*)">
+
+Far terrain is an experimental opt-in feature for Macs with 10 or more GPU cores. Enable it with `mcopt.lod=true` in `config/mcopt.properties`. All `mcopt.lod.*` mixins are rejected when `mcopt.lod` is not set, so these flags are inert unless far terrain is enabled. The `recommended` profile turns far terrain on.
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `mcopt.lod` | `true` / `false` | `false` | Enable far terrain. Also enabled by setting `mcopt.lod.radius`. For Macs with 10 or more GPU cores. |
+| `mcopt.lod.radius` | integer (chunks) | `512` | How far the far terrain reaches, in chunks, to the edge of the coarsest tiles drawn. |
+| `mcopt.lod.render` | `mesh`, `walk` | `walk` | Far terrain render path. `mesh` uses rasterized per-tile meshes with a GPU cull and indirect draws. All profiles that touch far terrain set `mesh`. |
+| `mcopt.lod.fade` | `instant`, default | — | LOD hand-off fade style. `instant` suppresses the fade-in for a seamless transition. |
+| `mcopt.lod.handoff` | `drawn`, default | — | Real-terrain hand-off strategy. `drawn` hands off once the real chunk is drawn. |
+| `mcopt.lod.prio` | `screen`, default | — | Column streaming priority. `screen` prioritises columns visible on screen. |
+| `mcopt.lod.publish` | `gpu`, default | — | Column publish path. `gpu` uses a GPU-side upload path. |
+| `mcopt.lod.nativeNoise` | `neon`, default | — | NEON noise generation (bit-exact with the game's noise; measured faster on Apple Silicon). |
+| `mcopt.lod.yield` | `missing:0`, default | — | Generation yield policy while the client lacks chunks in the render distance. `missing:0` yields immediately so real chunks are never delayed. |
+| `mcopt.lod.handoffPush` | float | `0.9995` | Depth push for real terrain during hand-off, so real terrain wins coplanar tops over far terrain. |
+| `mcopt.lod.pk` | `true` / `false` | `false` | Position-keyed draw lists (opt-in). |
+| `mcopt.lod.realOcc` | `true` / `false` | `false` | Real-terrain occluder for far terrain (opt-in). |
+| `mcopt.lod.seam` | direction string | — | Transition probe direction (debug). |
+| `mcopt.lod.taa` | `true` / `false` | `false` | Temporal anti-aliasing for far terrain. |
+| `mcopt.lod.small` | `true` / `false` | `false` | Small-GPU far terrain mode (MacBook Neo / 5-core GPU). Uses a quarter-size clipmap window to reduce geometry cost. |
+| `mcopt.lod.n` | integer | `2048` (`512` with `small`) | Cells across each clipmap level's window (power of two). Larger = finer detail at the cost of memory (8 N² bytes per level). |
+| `mcopt.lod.threads` | integer | cores − 4 | Generation worker thread count. Default leaves 4 threads for the game and GPU driver. |
+| `mcopt.lod.walk` | `segmented`, `rows`, `serial` | `serial` | Column walk strategy. `segmented` spawns a thread per level for more parallelism on wide GPUs. |
+| `mcopt.lod.rowSegs` | integer | `48` | Segments per column row when `mcopt.lod.walk=rows`. |
+| `mcopt.lod.crownLevels` | integer | `1` (`2` with `small`) | Finest N levels that render tree crowns floating over ground. |
+| `mcopt.lod.treeLevels` | integer | `1` | Finest N levels (at most 2) that render full game-generated trees. Level 1 requires block-exact ground data (~5× the generation work). |
+| `mcopt.lod.crownShade` | float | `0.7` | Sky light factor under tree crowns. |
+| `mcopt.lod.nearDetail` | `true` / `false` | `true` | Per-pixel detail on level 0 (smooth-lighting occlusion from neighbour columns, grass side band, material under top block on walls). |
+| `mcopt.lod.textures` | `true` / `false` | `true` | Draw level 0 with the blocks' own textures (mipmapped). `false` = flat colours per face. |
+| `mcopt.lod.plants` | `true` / `false` | `true` | Render grass, ferns and flowers on level 0. Requires `mcopt.lod.textures=true`. |
+| `mcopt.lod.trees` | `true` / `false` | `true` | Render tree canopy on generated (never-visited) terrain. |
+| `mcopt.lod.fineDensity` | `true` / `false` | `true` | Levels 0–1 use the game's final density function so cave mouths and pits break the surface as in real chunks. |
+| `mcopt.lod.fineLevels` | integer | `2` | How many of the finest levels use final density (with `fineDensity`). |
+| `mcopt.lod.fogStart` | float | — | Render-distance fade start as a fraction of the reach. Default uses the game's own (last tenth of reach). |
+| `mcopt.lod.haze` | float | `1.0` | Stretch the game's environmental fog range to this multiple of the reach when longer than 1024 blocks. |
+| `mcopt.lod.cache` | `true` / `false` | `true` | Disk cache for generated far terrain tiles. `false` regenerates every tile each session. |
+| `mcopt.lod.cacheDir` | path | — | Override the per-world cache directory (default: `mcopt-lod` in the game directory). |
+| `mcopt.lod.stats` | `true` / `false` | `false` | Log drawn and generated tile stats once per second. |
+| `mcopt.lod.verify` | `true` / `false` | `false` | Compare each arriving real chunk against its far terrain column by column and log agreement (debug). |
+| `mcopt.lod.draw` | `true` / `false` | `true` | Draw far terrain. `false` generates but draws nothing (useful for benchmarking generation alone). |
+| `mcopt.lod.probe` | integer (ms) | `0` | Alternating A/B draw probe: toggles drawing on/off every N ms and logs the mean frame interval of each state. |
+| `mcopt.lod.dump` | directory path | — | Raw dump of a frame's walk inputs for the offline harness. |
+| `mcopt.lod.dumpFrame` | long | `600` | Frame number to dump when `mcopt.lod.dump` is set. |
+| `mcopt.lod.chunks` | `true` / `false` | `true` | Summarize the game's own chunks (real chunks) in far terrain. |
+
+</Accordion>
+
+<Accordion title="Chunk Pipeline (mcopt.chunk.*)">
+
+These flags optimise chunk loading, meshing, and server-side chunk processing. They are active on both the client and the integrated server. All are marked exact (same output as vanilla) and have been soak-tested.
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `mcopt.chunk.saveSkip` | `true` / `false` | `false` | Skip writing a region file sector when the bytes are identical to what is already on disk. |
+| `mcopt.chunk.mesh` | `all,biome`, default | — | Enable fast mesher paths including biome blending. Set to `all,biome` in the `alpha` and `recommended` profiles. |
+| `mcopt.chunk.clones` | integer | `0` | Section-clone cache size. The `alpha` and `recommended` profiles set `4096`. Left out on the small tier (≤ 8 GB RAM or < 10 GPU cores) to save memory. |
+| `mcopt.chunk.clonesCleanup` | `true` / `false` | `false` | Expiry walk for the clone cache stops at the first unexpired entry (behaviour-identical). Required alongside `clones=4096`. |
+| `mcopt.chunk.poi` | `true` / `false` | `false` | POI (point of interest) search implemented as direct loops instead of stream operations. |
+| `mcopt.chunk.ticks` | `true` / `false` | `false` | Chunk ticking without per-pick overhead. |
+| `mcopt.chunk.chunkGet` | `true` / `false` | `false` | Section index offset computed once per chunk lookup instead of on every access. |
+
+</Accordion>
+
+<Accordion title="CPU / Render Thread (mcopt.cpu.*)">
+
+These flags reduce CPU overhead on the render thread and in render-list processing.
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `mcopt.cpu.fence` | `true` / `false` | `false` | Name each GPU submit's fence to that submit, eliminating a mid-frame GPU wait on the render thread (exact, 0 px difference). |
+| `mcopt.cpu.texelCache` | `true` / `false` | `false` | Cache texel buffer views over the same backing memory, avoiding redundant view creation (exact, 0 px). |
+| `mcopt.cpu.model` | `true` / `false` | `false` | Reuse entity model compile results when the model is unchanged (exact by construction). |
+| `mcopt.cpu.lists` | `true` / `false` | `false` | Render-list walk with a region cache (measured at −9% of `readRenderListFromTree` on the Neo). |
+| `mcopt.cpu.cullRecover` | `true` / `false` | `false` | Re-run the cull pass when the chunk graph changes mid-frame (fixes a Sodium lost-update). |
+
+</Accordion>
+
+<Accordion title="Memory / Light Engine (mcopt.alloc.*)">
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `mcopt.alloc.lightMap` | `true` / `false` | `false` | The light engine publishes a read-only snapshot of its section map instead of copying the map on every update, reducing allocation pressure. |
+
+</Accordion>
+
+<Accordion title="Thread QoS (mcopt.qos.*)">
+
+mcopt assigns Apple Quality of Service roles to Minecraft threads using `pthread_set_qos_class_self_np` from libSystem. On by default: the render thread is set to `user-interactive` and the integrated server thread to `user-initiated`. Measured improvements on the Neo: busy-area flight +17% fps, 1% lows +63%, MSPT −25%; hot laptop MSPT p99 −57%..−71%. Chunk builders are deliberately left at their default QoS (raising them cost 21% on the laptop's 0.1% lows).
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `mcopt.qos` | `on` / `off` | `on` | Enable QoS role assignments globally. `off` disables all QoS mixins. |
+| `mcopt.qos.render` | `background`, `utility`, `default`, `initiated`, `interactive` | `interactive` | QoS class for the render thread. |
+| `mcopt.qos.server` | `background`, `utility`, `default`, `initiated`, `interactive` | `initiated` | QoS class for the integrated server thread. |
+| `mcopt.qos.mesh` | `background`, `utility`, `default`, `initiated`, `interactive` | — | QoS class for chunk builder threads. Not set by default (deliberately left at system default). |
+| `mcopt.qos.cull` | `background`, `utility`, `default`, `initiated`, `interactive` | — | QoS class for the cull thread. |
+| `mcopt.qos.worker` | `background`, `utility`, `default`, `initiated`, `interactive` | — | QoS class for Worker-Main threads. |
+| `mcopt.qos.io` | `background`, `utility`, `default`, `initiated`, `interactive` | — | QoS class for IO-Worker threads. |
+| `mcopt.qos.log` | `true` / `false` | `false` | Log each QoS assignment (role name, thread name, and return code) as it happens. |
+
+Set a role to `none` (e.g. `-Dmcopt.qos.render=none`) to remove that role from QoS management without disabling the others.
+
+</Accordion>
+
+<Accordion title="Startup (mcopt.startup.*)">
+
+Startup flags defer or parallelize work that Minecraft performs during initialisation. All are behaviour-identical — the same objects and values are produced, just later or concurrently.
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `mcopt.startup.narrator` | `lazy` | — | Create the macOS speech channel on the narrator's first use instead of in Minecraft's constructor (saves ~0.47 s on the MacBook Neo). Enabled by `lazy`. |
+| `mcopt.startup.crashPreload` | `async` | — | Build the warm-up crash report (which runs an external hardware-probe command, ~0.43 s on the Neo) on a daemon thread. The memory reserve is still allocated first on the main thread. |
+| `mcopt.startup.blockCache` | `parallel`, `digest`, `parallel-digest` | — | Block state cache init strategy. `parallel` computes every block state's cache (shapes, light, sturdy faces) in parallel after the registry loop. `digest` computes serially and prints a digest. `parallel-digest` runs parallel and prints a digest for comparison. |
+| `mcopt.startup.fadeMs` | integer | `1000` | Loading overlay fade-out duration in milliseconds (fade-in is N/2 ms instead of 500). A visible UI change, not a game-logic change. |
+| `mcopt.startup.blockCacheDump` | file path | — | Write a per-state block cache digest to the given file (used with `blockCache=digest` or `parallel-digest`). |
+
+</Accordion>
+
+<Accordion title="Debug / Internal">
+
+These flags are intended for development and testing. They are not set by any profile.
+
+| Flag | Values | Description |
+|---|---|---|
+| `mcopt.platformCheck.fake` | `linux`, `x86_64`, version string | Simulate a different platform (OS name, CPU architecture, or macOS version) so the platform-compatibility check trips on a real Mac. Used for testing install-help messages. |
+| `mcopt.qos.log` | `true` / `false` | Log each QoS assignment as it is applied (thread name, class code, return code). |
+| `mcopt.startup.blockCacheDump` | file path | Write a line-by-line block cache value digest to the given file path for offline comparison between serial and parallel cache builds. |
+| `mcopt.metal.latency` | `true` / `false` | Record the input-poll timestamp for each frame alongside its presenting command buffer. Requires `mcopt.metal.gpuTimes=true`. Reports input-sample → commit → GPU done → presented per shown frame. |
+| `mcopt.edgeCap.log` | `true` / `false` | Log edge-cap state every 2 seconds: generated chunk count, near count, reach radius, distance range, and whether the cap is active. |
+| `mcopt.edgeCap.holdMs` | integer (ms) | `1000` | How long (in ms) after the last nearby generation event the edge cap remains active. |
+| `mcopt.edgeCap.margin` | integer (chunks) | `32` | Chunk margin beyond the render distance within which a generating chunk triggers the edge cap. |
+| `mcopt.lod.stats` | `true` / `false` | Log far terrain draw and generation stats once per second. |
+| `mcopt.lod.verify` | `true` / `false` | Compare each arriving real chunk against its far terrain column by column and log agreement. |
+| `mcopt.lod.probe` | integer (ms) | Alternating A/B draw probe for far terrain benchmarking. |
+| `mcopt.lod.dump` | directory path | Raw dump of a frame's walk inputs for the offline harness. |
+
+</Accordion>

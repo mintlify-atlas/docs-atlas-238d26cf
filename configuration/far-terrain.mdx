@@ -1,0 +1,68 @@
+---
+title: "Enable Far Terrain (LOD) in mcopt"
+sidebarTitle: "Far Terrain"
+description: "mcopt's experimental far-terrain renderer extends visibility hundreds of chunks using Metal compute shaders and NEON noise. Enable with mcopt.lod=true on Macs with 10+ GPU cores."
+---
+
+Far terrain is an experimental opt-in that renders terrain beyond the normal render distance using mcopt's own Metal compute pipeline. It generates terrain column data natively on NEON (bit-exact with the game's own noise) and composites it into the same render pass as real terrain. The result is a seamless view that stretches to the edge of the coarsest clipmap tiles — 512 chunks (8,192 blocks) by default — with the real terrain handing off smoothly as chunks load in.
+
+<Warning>
+Far terrain is **experimental**. It costs significant fps on Macs with fewer than 10 GPU cores. The `recommended` profile enables it for 10+-core Macs; the `indie` and `alpha` profiles leave it off.
+</Warning>
+
+## Enabling far terrain
+
+Add `mcopt.lod=true` to `config/mcopt.properties`, or pass `-Dmcopt.lod=true` as a JVM flag:
+
+```properties
+# config/mcopt.properties — indie profile plus far terrain
+profile=indie
+mcopt.lod=true
+```
+
+Far terrain requires the Metal backend to be active (`mcopt.metal=true`, the default). It runs only in single-player or as a LAN host — there is no integrated server in multiplayer.
+
+<Tip>
+The easiest way to enable far terrain on a 10+-core Mac is `profile=recommended`. It bundles far terrain, the full seamless hand-off set, NEON noise, and all `indie` improvements in one line.
+</Tip>
+
+## Far terrain flags
+
+| Flag | Values / Default | Description |
+|---|---|---|
+| `mcopt.lod` | `true`/`false` (default `false`) | Enable far terrain |
+| `mcopt.lod.render` | `mesh` / `walk` (default `walk`) | Far terrain render path. `mesh` = full-cull mesh renderer (set by all profiles) |
+| `mcopt.lod.fade` | `instant` / default | LOD hand-off fade. `instant` = no fade-in when sections load; the seam is seamless |
+| `mcopt.lod.handoff` | `drawn` / default | Real-terrain hand-off strategy. `drawn` = wait until the real terrain is listed in Sodium's render lists |
+| `mcopt.lod.prio` | `screen` / default | Column streaming priority. `screen` = screen-space priority (columns you see first) |
+| `mcopt.lod.publish` | `gpu` / default | Column publish path. `gpu` = GPU-side publish of generated columns |
+| `mcopt.lod.nativeNoise` | `neon` / default | Terrain noise generated on NEON — bit-exact with the game's own noise |
+| `mcopt.lod.yield` | `missing:0` / default | Generation yield policy while real chunks are loading. `missing:0` = yield when real chunks are missing |
+| `mcopt.lod.handoffPush` | `0.9995` / `0` | Far terrain depth multiplier so real terrain wins coplanar tops and avoids z-fighting |
+| `mcopt.lod.pk` | `true`/`false` | Position-keyed draw lists (opt-in) |
+| `mcopt.lod.realOcc` | `true`/`false` | Use real terrain as an occluder for far terrain (opt-in) |
+| `mcopt.lod.radius` | `512` (chunks) | Reach in chunks — the edge of the coarsest tiles drawn |
+| `mcopt.lod.n` | `2048` | Cells across each clipmap level's window (power of two). Increase for higher cell density at high resolution |
+| `mcopt.lod.threads` | auto | Generation worker thread count (default: `max(2, availableCores - 4)`) |
+
+## The seamless set
+
+For the smoothest possible hand-off between real and far terrain, enable all four seamless flags together:
+
+```properties
+mcopt.lod.fade=instant
+mcopt.lod.handoff=drawn
+mcopt.lod.prio=screen
+mcopt.lod.publish=gpu
+```
+
+- **`fade=instant`** — sections appear without a fade-in while far terrain is drawing, so there is no visible pop when real chunks load.
+- **`handoff=drawn`** — far terrain steps back from a chunk only once Sodium actually lists one of its sections in the current frame's render lists. This prevents holes in fast flight.
+- **`prio=screen`** — column generation is prioritised by screen-space position, so the columns you are looking at arrive first.
+- **`publish=gpu`** — generated columns are published to the GPU without a CPU round-trip.
+
+These four flags are all active in the `recommended` profile, alongside `mcopt.lod.handoffPush=0.9995`.
+
+## Disk cache
+
+Far terrain tiles are cached on disk so they load instantly in subsequent sessions. The cache lives in `<game dir>/mcopt-lod/` by default. To change the location: `mcopt.lod.cacheDir=/path/to/cache`. To disable caching: `mcopt.lod.cache=false`.

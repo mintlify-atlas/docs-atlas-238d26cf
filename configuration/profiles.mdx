@@ -1,0 +1,114 @@
+---
+title: "mcopt Profile System: indie, alpha, recommended, none"
+sidebarTitle: "Profiles"
+description: "mcopt ships three preset profiles — indie, alpha, and recommended — that enable different sets of optimizations. Switch profiles with the profile= key in mcopt.properties."
+---
+
+Profiles are named collections of `-Dmcopt.*` flags that mcopt loads at startup, before any individual override is applied. Instead of passing a long list of JVM flags to your launcher, you pick a profile and mcopt sets everything up. Any `mcopt.*` key you add to `config/mcopt.properties`, or pass on the JVM command line, takes priority over the profile's own value for that key.
+
+## Setting a profile
+
+Add a `profile=NAME` line to `config/mcopt.properties`, or pass `-Dmcopt.profile=NAME` on the command line:
+
+```properties
+# config/mcopt.properties
+profile=recommended
+```
+
+If neither is set, mcopt defaults to `indie`. To disable all optimisations and run vanilla's renderer, use `profile=none`.
+
+<Note>
+`profile=` in `mcopt.properties` wins over the built-in default, but a `-Dmcopt.profile=` JVM flag wins over everything — including what is written in the file.
+</Note>
+
+## Profiles
+
+<Tabs>
+  <Tab title="indie (default)">
+    The `indie` profile enables mcopt's own Metal near-terrain renderer alongside a baseline set of CPU, chunk pipeline, startup, and edge-cap improvements. No Sodium dependency is required. Far terrain (`mcopt.lod`) is deliberately left off — it remains an experimental opt-in.
+
+    **What it enables:**
+
+    - **Own Metal renderer** (`mcopt.own=true`) — replaces Sodium's terrain pipeline with mcopt's native Metal backend
+    - **Compact 40-byte quad records** (`mcopt.own.mesh.qrec=true`) — solid and cutout layers as compact records decoded by the vertex stage (exact vs vanilla)
+    - **Own block mesher** (`mcopt.own.mesh=true`) — replaces the vanilla/Sodium mesher; meshing CPU time −37% measured
+    - **GPU unit occlusion** (`mcopt.own.frag.uocc=true`) — depth pyramid and per-unit occlusion test
+    - **Translucent path** (`mcopt.own.translucent=true`) — own translucent rendering path (exact vs vanilla)
+    - **One-pass texture animation** on GPUs with 8+ cores (`mcopt.own.int.animOnePass=true`)
+    - **Adaptive frame pacing** (`mcopt.metal.paceAdapt=true`)
+    - **Edge cap** (`mcopt.edgeCap=true`) — fps capped at 2× display refresh while the integrated server generates terrain within RD+32 chunks
+    - All CPU/chunk/QoS baseline improvements from the `alpha` profile (fence naming, texel cache, model reuse, chunk saves, POI/tick/light engine, narrator lazy-init)
+
+    **Best for:** most users on any Apple Silicon Mac.
+  </Tab>
+  <Tab title="alpha">
+    The `alpha` profile applies mcopt's CPU-side and chunk pipeline improvements only — no own renderer, no far terrain. Vanilla's renderer stays in place. This profile is suitable when you want the measured performance wins but not the custom Metal terrain pipeline.
+
+    **What it enables:**
+
+    - **Chunk save skip** (`mcopt.chunk.saveSkip=true`) — byte-identical region writes skipped
+    - **Mesher fast paths** (`mcopt.chunk.mesh=all,biome`) — Sodium fast paths including biome blend (exact)
+    - **Section-clone cache** (`mcopt.chunk.clones=4096`) — 4096-entry Sodium clone cache with cleanup; see small-tier note below
+    - **Render-list optimisation** (`mcopt.cpu.lists=true`) — render-list walk with a region cache (−9% of `readRenderListFromTree`)
+    - **Cull recovery** (`mcopt.cpu.cullRecover=true`) — re-runs a cull scheduled while the graph changes
+    - **Fence naming** (`mcopt.cpu.fence=true`) — no mid-frame GPU wait on the render thread
+    - **Texel cache** (`mcopt.cpu.texelCache=true`) — texel buffer views cached over the same memory
+    - **Model reuse** (`mcopt.cpu.model=true`) — entity model compile reuse
+    - **Server-side** (`mcopt.chunk.poi`, `mcopt.chunk.ticks`, `mcopt.chunk.chunkGet`) — POI search, chunk ticking, section index offset
+    - **Light engine** (`mcopt.alloc.lightMap=true`) — read-only snapshot instead of copy per update
+    - **Edge cap** and **adaptive frame pacing**
+    - **Narrator lazy-init** (`mcopt.startup.narrator=lazy`)
+
+    **Best for:** users who want measurable wins without the custom renderer — or when testing renderer-independent improvements.
+
+    ### Small-tier handling
+
+    On Macs with fewer than 10 GPU cores **or** 8 GB of RAM or less (or where either value is unreadable), the `alpha` profile omits the 4096-entry clone cache (`mcopt.chunk.clones=4096`) and its cleanup (`mcopt.chunk.clonesCleanup=true`). Those entries cost memory that is scarce on small-GPU or low-RAM Macs. mcopt logs the detected tier at startup:
+
+    ```
+    [mcopt] profile alpha: tier small (gpu cores 5, ram 8.0 GB); left out: mcopt.chunk.clones mcopt.chunk.clonesCleanup
+    ```
+
+    The full tier (10+ cores and more than 8 GB) keeps the cache.
+  </Tab>
+  <Tab title="recommended">
+    The `recommended` profile starts with everything in `indie` and adds far terrain plus the full seamless hand-off set. Every setting it ships was measured on the test Macs before being accepted. Targeted at Macs with 10 or more GPU cores.
+
+    **What it adds on top of indie:**
+
+    - **Far terrain** (`mcopt.lod=true`) — the LOD renderer at the default 512-chunk reach
+    - **Seamless set**: instant fade-in (`mcopt.lod.fade=instant`), drawn hand-off (`mcopt.lod.handoff=drawn`), screen-priority streaming (`mcopt.lod.prio=screen`), GPU publish (`mcopt.lod.publish=gpu`)
+    - **Depth push** (`mcopt.lod.handoffPush=0.9995`) — far terrain pushed back so real terrain wins coplanar tops
+    - **NEON noise** (`mcopt.lod.nativeNoise=neon`) — terrain noise generated on NEON, bit-exact with the game's own noise
+    - **Section-clone cache** (`mcopt.chunk.clones=4096` + cleanup) — always included (no small-tier drop; recommended requires 10+ cores)
+    - **Render-list and cull-recovery** (`mcopt.cpu.lists`, `mcopt.cpu.cullRecover`)
+    - All other `indie` and `alpha` improvements
+
+    **Best for:** Macs with 10 or more GPU cores (M1 Pro 10-core and above, M4 mini, M6 …) that want the highest-quality, furthest-reaching terrain view.
+  </Tab>
+  <Tab title="none">
+    `profile=none` applies no profile at all. Every mcopt optimisation is left off, and Minecraft runs its vanilla renderer exactly as if mcopt were not installed. This is the same as the old no-profile behaviour.
+
+    Use it to verify a bug is not caused by mcopt, or as a clean base to turn individual flags on one at a time.
+
+    ```properties
+    profile=none
+    ```
+  </Tab>
+</Tabs>
+
+## Mixing a profile with individual overrides
+
+Individual keys in `mcopt.properties` win over the profile. A common use is to take the `indie` profile but also enable far terrain:
+
+```properties
+profile=indie
+mcopt.lod=true
+```
+
+Or to keep all `indie` improvements but revert to vanilla's renderer:
+
+```properties
+profile=indie
+mcopt.own=false
+```
