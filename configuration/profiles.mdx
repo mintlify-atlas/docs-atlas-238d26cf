@@ -1,7 +1,7 @@
 ---
 title: "mcopt Profile System: indie, alpha, recommended, none"
 sidebarTitle: "Profiles"
-description: "mcopt ships three preset profiles — indie, alpha, and recommended — that enable different sets of optimizations. Switch profiles with the profile= key in mcopt.properties."
+description: "mcopt ships three preset profiles — indie, alpha, and recommended — each enabling different optimizations. Set profile= in mcopt.properties to switch."
 ---
 
 Profiles are named collections of `-Dmcopt.*` flags that mcopt loads at startup, before any individual override is applied. Instead of passing a long list of JVM flags to your launcher, you pick a profile and mcopt sets everything up. Any `mcopt.*` key you add to `config/mcopt.properties`, or pass on the JVM command line, takes priority over the profile's own value for that key.
@@ -37,7 +37,7 @@ If neither is set, mcopt defaults to `indie`. To disable all optimisations and r
     - **One-pass texture animation** on GPUs with 8+ cores (`mcopt.own.int.animOnePass=true`)
     - **Adaptive frame pacing** (`mcopt.metal.paceAdapt=true`)
     - **Edge cap** (`mcopt.edgeCap=true`) — fps capped at 2× display refresh while the integrated server generates terrain within RD+32 chunks
-    - All CPU/chunk/QoS baseline improvements from the `alpha` profile (fence naming, texel cache, model reuse, chunk saves, POI/tick/light engine, narrator lazy-init)
+    - **CPU/server baseline** (fence naming, texel cache, model reuse, chunk-save skip, POI/tick/chunk-get/light engine, narrator lazy-init) — the non-Sodium improvements. Sodium-specific flags (`chunk.clones`, `chunk.mesh`, `cpu.lists`, `cpu.cullRecover`) are omitted because the own renderer replaces Sodium's terrain pipeline.
 
     **Best for:** most users on any Apple Silicon Mac.
   </Tab>
@@ -65,29 +65,30 @@ If neither is set, mcopt defaults to `indie`. To disable all optimisations and r
 
     On Macs with fewer than 10 GPU cores **or** 8 GB of RAM or less (or where either value is unreadable), the `alpha` profile omits the 4096-entry clone cache (`mcopt.chunk.clones=4096`) and its cleanup (`mcopt.chunk.clonesCleanup=true`). Those entries cost memory that is scarce on small-GPU or low-RAM Macs. mcopt logs the detected tier at startup:
 
-    ```
+    ```text
     [mcopt] profile alpha: tier small (gpu cores 5, ram 8.0 GB); left out: mcopt.chunk.clones mcopt.chunk.clonesCleanup
     ```
 
     The full tier (10+ cores and more than 8 GB) keeps the cache.
   </Tab>
   <Tab title="recommended">
-    The `recommended` profile starts with everything in `indie` and adds far terrain plus the full seamless hand-off set. Every setting it ships was measured on the test Macs before being accepted. Targeted at Macs with 10 or more GPU cores.
+    The `recommended` profile enables far terrain alongside the full seamless hand-off set, the Sodium chunk-pipeline improvements, and the same CPU/server optimisations as the `alpha` profile. It does **not** enable mcopt's own Metal renderer — Minecraft uses Sodium's renderer. Every setting it ships was measured on the test Macs before being accepted. Targeted at Macs with 10 or more GPU cores.
 
-    **What it adds on top of indie:**
+    **What it enables:**
 
     - **Far terrain** (`mcopt.lod=true`) — the LOD renderer at the default 512-chunk reach
     - **Seamless set**: instant fade-in (`mcopt.lod.fade=instant`), drawn hand-off (`mcopt.lod.handoff=drawn`), screen-priority streaming (`mcopt.lod.prio=screen`), GPU publish (`mcopt.lod.publish=gpu`)
     - **Depth push** (`mcopt.lod.handoffPush=0.9995`) — far terrain pushed back so real terrain wins coplanar tops
     - **NEON noise** (`mcopt.lod.nativeNoise=neon`) — terrain noise generated on NEON, bit-exact with the game's own noise
-    - **Section-clone cache** (`mcopt.chunk.clones=4096` + cleanup) — always included (no small-tier drop; recommended requires 10+ cores)
-    - **Render-list and cull-recovery** (`mcopt.cpu.lists`, `mcopt.cpu.cullRecover`)
-    - All other `indie` and `alpha` improvements
+    - **Chunk pipeline**: save-skip (`mcopt.chunk.saveSkip`), Sodium mesher fast paths (`mcopt.chunk.mesh=all,biome`)
+    - **Section-clone cache** (`mcopt.chunk.clones=4096` + `mcopt.chunk.clonesCleanup`) — no small-tier drop (recommended targets 10+ cores)
+    - **Render-list walk** (`mcopt.cpu.lists`) and **cull recovery** (`mcopt.cpu.cullRecover`)
+    - **CPU/server baseline**: fence naming, texel cache, model reuse, narrator lazy-init, server-side POI/tick/chunk, light-engine snapshot, edge cap, adaptive frame pacing
 
-    **Best for:** Macs with 10 or more GPU cores (M1 Pro 10-core and above, M4 mini, M6 …) that want the highest-quality, furthest-reaching terrain view.
+    **Best for:** Macs with 10 or more GPU cores (M1 Pro 10-core and above, M4 mini, M6 …) that want far terrain with the highest-quality seamless hand-off. Pair with `indie` flags via `mcopt.own=true` if you also want the own renderer.
   </Tab>
   <Tab title="none">
-    `profile=none` applies no profile at all. Every mcopt optimisation is left off, and Minecraft runs its vanilla renderer exactly as if mcopt were not installed. This is the same as the old no-profile behaviour.
+    `profile=none` applies no profile at all. No profile flags are set, and Minecraft runs its vanilla renderer. Thread QoS remains active (it is always on by default, independent of the profile). This is the same as the old no-profile behaviour.
 
     Use it to verify a bug is not caused by mcopt, or as a clean base to turn individual flags on one at a time.
 

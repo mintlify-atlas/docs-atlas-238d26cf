@@ -38,7 +38,7 @@ mcopt's performance improvements come from several compounding changes to how Mi
 
 **Native Metal GPU API**
 
-Minecraft's default renderer speaks OpenGL. On macOS that OpenGL traffic is translated to Metal in real time by Apple's MoltenVK/OpenGL translation layer, which adds CPU overhead on every draw call. mcopt replaces that path with a direct Metal backend — the `MetalBackend` class implements Minecraft's own `GpuBackend` interface and creates a native Metal device, cutting out the translation layer entirely.
+Minecraft's default renderer speaks OpenGL. On macOS that OpenGL traffic passes through Apple's OpenGL implementation, which itself translates draw calls to Metal at runtime — adding CPU overhead on every call. mcopt replaces that path with a direct Metal backend — the `MetalBackend` class implements Minecraft's own `GpuBackend` interface and creates a native Metal device, cutting out that intermediate layer entirely.
 
 **Own terrain pipeline**
 
@@ -49,5 +49,5 @@ mcopt's own terrain renderer (`mcopt.own`) uses compact vertex layouts and GPU-u
 mcopt raises Java thread priorities to match macOS quality-of-service levels (QoS), so chunk-building and render threads compete fairly with other system processes. The chunk pipeline is also tuned so that mesh uploads and occlusion queries are pipelined rather than stalling the render thread.
 
 <Tip>
-The M6 achieves 2000+ fps spinning because it has 12 GPU cores and triggers the full vGroup optimisation path. The M4 mini (10 cores) also qualifies for the full path; the MacBook Neo (5-core GPU) runs the smaller-tier path, which is why its gains are proportionally lower but still substantial — 591–638 fps spinning versus 79–81 fps vanilla.
+The M6 achieves 2000+ fps spinning because it has 12 GPU cores, which meets the threshold for the vGroup draw optimisation (`mcopt.own.frag.vGroupMinCores=12`). The M4 mini has 10 cores and does not activate vGroup; the MacBook Neo has a 5-core GPU and runs the smaller-tier path. Even without vGroup, the M4 mini reaches 1209–1211 fps spinning — over 7× vanilla — and the MacBook Neo reaches 591–638 fps, over 7× its vanilla baseline.
 </Tip>

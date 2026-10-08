@@ -1,7 +1,7 @@
 ---
-title: "mcopt Release History and Changelog"
+title: "mcopt Version History: Changelog and Release Notes"
 sidebarTitle: "Changelog"
-description: "Version history for mcopt, including major milestones: the Metal renderer in 0.3.0, Sodium removal, own terrain renderer, far terrain, and compatibility changes."
+description: "Version history for mcopt: Metal renderer in 0.2.0-alpha.3, Sodium removal and own terrain renderer in 0.3.0-alpha.1, planned features and requirements."
 ---
 
 This page summarizes the major changes in each mcopt release based on available information. For the full diff and release notes, see the [GitHub Releases page](https://github.com/noahdunnagan/mcopt/releases).
@@ -9,6 +9,8 @@ This page summarizes the major changes in each mcopt release based on available 
 <Note>
 mcopt is alpha software. APIs, configuration flags, and profile defaults may change between releases without a deprecation period. Back up your worlds before updating.
 </Note>
+
+<AccordionGroup>
 
 <Accordion title="0.3.0-alpha.1 — Sodium no longer required">
 
@@ -65,16 +67,18 @@ The Neo's vanilla and Sodium cells are from the `da566d00` run, which differs fr
 
 </Accordion>
 
+</AccordionGroup>
+
 ## Planned features
 
 The following improvements are on the roadmap, drawn from the README:
 
 - **Far terrain on by default** with tiers for smaller Macs (currently an experimental opt-in for 10+ GPU core Macs)
-- **Own shaders** (BSL-level quality) as an option
-- **Faster world generation** — native NEON noise, bit-exact with the game's
+- **Our own shaders** (BSL-level) as an option
+- **Faster world generation** — native noise, bit-exact
 - **More exact server-tick and chunk optimizations**, held for later alphas
 - **Faster startup**
-- **Wider hardware testing** across more Mac models
+- **Wider hardware testing**
 
 <Note>
 Far terrain (`mcopt.lod=true`) is available today as an opt-in for Macs with 10 or more GPU cores. See the [far terrain configuration page](/configuration/far-terrain) for setup details.

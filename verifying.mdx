@@ -1,5 +1,5 @@
 ---
-title: "Verify mcopt Is Running in Minecraft"
+title: "Verify mcopt Is Running — F3 Screen and Config Check"
 sidebarTitle: "Verifying"
 description: "How to confirm the mcopt Metal renderer is active after installation using Minecraft's debug screen and the config file written on first launch."
 ---
@@ -10,7 +10,7 @@ After installing mcopt, it only takes a few seconds to confirm that the mod load
 
 Load into a world, then press **F3** (or **fn + F3** on a Mac keyboard with standard function-key behaviour). The debug overlay fills the screen with technical information. Look at the **bottom-right corner** — when mcopt's Metal renderer is active you will see:
 
-```
+```text
 Metal 3 (mcopt)
 ```
 
@@ -31,10 +31,7 @@ On its very first launch mcopt writes a settings file to disk. The presence of t
 ~/Library/Application Support/minecraft/config/mcopt.properties
 ```
 
-**Prism Launcher** (replace `<InstanceName>` with your instance's name):
-```bash
-~/Library/Application Support/PrismLauncher/instances/<InstanceName>/minecraft/config/mcopt.properties
-```
+**Prism Launcher:** the file is in the `minecraft/config` folder inside your instance's root directory.
 
 Open the file in any text editor. A fresh installation looks exactly like this:
 
@@ -57,21 +54,29 @@ profile=indie
   thread-priority optimizations. This is the recommended default for all
   supported hardware.
 
-  To revert to vanilla's OpenGL renderer while keeping mcopt loaded, change
-  that line to `profile=none` and restart Minecraft. The other optimizations
-  (CPU pipeline, thread QoS) remain active; only the own terrain renderer and
-  Metal backend are turned off. To disable mcopt's renderer alone without
-  touching the other settings, uncomment `#mcopt.own=false` instead.
+  To revert to vanilla's renderer while keeping mcopt loaded, change that line
+  to `profile=none` and restart Minecraft — this applies no profile flags,
+  equivalent to running without any mcopt optimizations active. To disable only
+  the Metal renderer while keeping other profile flags, add `mcopt.metal=false`
+  on its own line instead. To disable only the own terrain renderer, uncomment
+  `#mcopt.own=false`.
 </Tip>
 
 ## Troubleshooting
 
 **The debug screen shows `OpenGL` instead of `Metal 3 (mcopt)`.**
 
-This is the most common issue and usually has one of two causes:
+This usually means the Metal renderer was disabled at startup. Check the following:
 
-1. **Sodium is still in the mods folder.** mcopt declares `"breaks": { "sodium": "*" }` in its Fabric metadata, so Fabric should have refused to start — but if you see OpenGL, double-check that no `sodium-*.jar` is present in your mods folder. Remove it and relaunch.
+1. **`mcopt.metal=false` is set.** If you previously added `mcopt.metal=false` to `mcopt.properties` or set `-Dmcopt.metal=false` as a JVM argument, the Metal backend is intentionally off. Remove that flag and relaunch.
 2. **You are not on macOS 26 or later.** mcopt requires macOS 26. Open **Apple menu → About This Mac** and confirm the version. If you are on an older release, update macOS via **System Settings → General → Software Update**.
+
+<Note>
+  If Sodium is still in the mods folder, mcopt's `"breaks": { "sodium": "*" }`
+  declaration causes Fabric Loader to refuse to start entirely — you would see
+  a Fabric error dialog before reaching the game, not an OpenGL renderer in the
+  debug screen. Remove any `sodium-*.jar` and relaunch if you see that dialog.
+</Note>
 
 **The `mcopt.properties` file was not created.**
 

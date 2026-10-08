@@ -1,7 +1,7 @@
 ---
-title: "Enable Far Terrain (LOD) in mcopt"
+title: "Enable Far Terrain (LOD) in mcopt on Apple Silicon"
 sidebarTitle: "Far Terrain"
-description: "mcopt's experimental far-terrain renderer extends visibility hundreds of chunks using Metal compute shaders and NEON noise. Enable with mcopt.lod=true on Macs with 10+ GPU cores."
+description: "mcopt's experimental far-terrain renderer reaches 512 chunks via Metal compute and NEON noise. Enable with mcopt.lod=true on Macs with 10+ GPU cores."
 ---
 
 Far terrain is an experimental opt-in that renders terrain beyond the normal render distance using mcopt's own Metal compute pipeline. It generates terrain column data natively on NEON (bit-exact with the game's own noise) and composites it into the same render pass as real terrain. The result is a seamless view that stretches to the edge of the coarsest clipmap tiles — 512 chunks (8,192 blocks) by default — with the real terrain handing off smoothly as chunks load in.
@@ -23,7 +23,7 @@ mcopt.lod=true
 Far terrain requires the Metal backend to be active (`mcopt.metal=true`, the default). It runs only in single-player or as a LAN host — there is no integrated server in multiplayer.
 
 <Tip>
-The easiest way to enable far terrain on a 10+-core Mac is `profile=recommended`. It bundles far terrain, the full seamless hand-off set, NEON noise, and all `indie` improvements in one line.
+The easiest way to enable far terrain on a 10+-core Mac is `profile=recommended`. It bundles far terrain, the full seamless hand-off set, NEON noise, and all CPU and chunk-pipeline improvements. Note that `recommended` uses Sodium's renderer — it does not enable mcopt's own Metal terrain renderer (`mcopt.own`). To get both, use `profile=indie` and add `mcopt.lod=true`.
 </Tip>
 
 ## Far terrain flags
@@ -61,7 +61,7 @@ mcopt.lod.publish=gpu
 - **`prio=screen`** — column generation is prioritised by screen-space position, so the columns you are looking at arrive first.
 - **`publish=gpu`** — generated columns are published to the GPU without a CPU round-trip.
 
-These four flags are all active in the `recommended` profile, alongside `mcopt.lod.handoffPush=0.9995`.
+These four flags are all active in the `recommended` profile (alongside `mcopt.lod.handoffPush=0.9995`) and in the `alpha` profile. The `indie` profile sets three of them (`fade=instant`, `prio=screen`, `publish=gpu`) but not `handoff=drawn` — it uses its own near-terrain seam (`mcopt.own.int.seam`) instead.
 
 ## Disk cache
 

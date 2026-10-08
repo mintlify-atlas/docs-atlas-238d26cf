@@ -1,10 +1,10 @@
 ---
-title: "mcopt Metal Renderer and Own Terrain Pipeline"
+title: "mcopt Native Metal Backend and Own Terrain Renderer"
 sidebarTitle: "Metal Renderer"
-description: "Configure mcopt's native Metal backend and its own near-terrain renderer. Key flags: mcopt.metal, mcopt.own, mcopt.own.compact, mcopt.own.mesh, and GPU unit occlusion."
+description: "Configure mcopt's Metal backend and own near-terrain renderer. Covers mcopt.metal, mcopt.own, the block mesher, GPU unit occlusion, and FRAPI support."
 ---
 
-mcopt registers a native Metal `GpuBackend` with Minecraft's renderpearl layer. When the Metal backend is active, all world rendering bypasses OpenGL (and MoltenVK) entirely — mcopt's backend creates a Metal window and Metal device, and every GPU command goes straight to Apple's driver. On top of the backend, mcopt's **own near-terrain renderer** replaces Sodium's terrain pipeline with a compact, occlusion-tested Metal pipeline. The `indie` profile enables both the backend and the own terrain pipeline by default.
+mcopt registers a native Metal `GpuBackend` with Minecraft's renderpearl layer. When the Metal backend is active, all world rendering bypasses OpenGL (and MoltenVK) entirely — mcopt's backend creates a Metal window and Metal device, and every GPU command goes straight to Apple's driver. On top of the backend, mcopt's **own near-terrain renderer** replaces Sodium's terrain pipeline with a compact, occlusion-tested Metal pipeline. The `indie` profile enables both the backend and the own terrain pipeline by default. The `recommended` profile does not enable the own renderer — it uses Sodium's renderer with far terrain on top.
 
 ## Enabling / disabling the Metal backend
 
@@ -25,11 +25,11 @@ Mods that call OpenGL directly (via LWJGL or Blaze3D's GL layer) will not render
 
 ### Adaptive frame pacing
 
-Enable with `mcopt.metal.paceAdapt=true` (set by `indie` and `alpha` profiles). On a laptop this produces 117–119 distinct frames/second versus 72–93 at the same hardware load, with p50 and p99 frame times lower and fps-per-GHz flat.
+Enable with `mcopt.metal.paceAdapt=true` (set by all three profiles: `indie`, `alpha`, and `recommended`). On a laptop this produces 117–119 distinct frames/second versus 72–93 at the same hardware load, with p50 and p99 frame times lower and fps-per-GHz flat.
 
 ## Own near-terrain renderer
 
-The own renderer (`mcopt.own=true`, set by `indie` and `recommended`) replaces Sodium's terrain compilation and draw path with a pipeline designed for Metal:
+The own renderer (`mcopt.own=true`, set by the `indie` profile) replaces Sodium's terrain compilation and draw path with a pipeline designed for Metal:
 
 - **Compact 40-byte quad records** — solid and cutout layer quads encoded as 40-byte records (`mcopt.own.mesh.qrec=true`), decoded by the vertex stage. Exact vs vanilla.
 - **32-quad compilation units** — sections are split into 32-quad units (`mcopt.own.run=32`) for fine-grained GPU work.
@@ -49,7 +49,7 @@ mcopt.own=false
 
 | Flag | Default | Description |
 |---|---|---|
-| `mcopt.own` | `false` | Enable the own Metal terrain renderer (set by `indie`/`recommended` profiles) |
+| `mcopt.own` | `false` | Enable the own Metal terrain renderer (set by the `indie` profile) |
 | `mcopt.own.compact` | `false` | Compact vertex layout for the own renderer |
 | `mcopt.own.mesh` | `false` | Own block mesher replacing Sodium's (meshing CPU −37%) |
 | `mcopt.own.mesh.qrec` | `false` | Solid and cutout layers as compact 40-byte quad records |
@@ -61,7 +61,7 @@ mcopt.own=false
 | `mcopt.metal.paceAdapt` | `false` | Adaptive frame pacing |
 
 <Tip>
-Adaptive frame pacing (`mcopt.metal.paceAdapt=true`) is enabled by both the `indie` and `alpha` profiles. On a MacBook it produces 117–119 distinct frames/s versus 72–93 without it, with lower p50 and p99 frame times.
+Adaptive frame pacing (`mcopt.metal.paceAdapt=true`) is enabled by all three profiles (`indie`, `alpha`, and `recommended`). On a MacBook it produces 117–119 distinct frames/s versus 72–93 without it, with lower p50 and p99 frame times.
 </Tip>
 
 ## FRAPI (Fabric Renderer API) compatibility

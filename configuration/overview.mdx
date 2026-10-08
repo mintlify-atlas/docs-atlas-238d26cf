@@ -1,5 +1,5 @@
 ---
-title: "Configure mcopt with Profiles and Property Flags"
+title: "mcopt Configuration: Profiles, Flags, and Precedence"
 sidebarTitle: "Overview"
 description: "mcopt is configured through a properties file and JVM system properties. Profiles set sensible defaults; individual flags override any profile value."
 ---
@@ -45,8 +45,8 @@ The `profile=` key accepts four values:
 | Value | Meaning |
 |---|---|
 | `indie` | mcopt's own Metal near-terrain renderer — the default |
-| `alpha` | Vanilla's renderer with mcopt's CPU/chunk pipeline and QoS improvements only |
-| `recommended` | All of `indie` plus far terrain and the full seamless set (10+ GPU cores) |
+| `alpha` | Vanilla's renderer with mcopt's CPU/chunk pipeline improvements (no own renderer) |
+| `recommended` | Far terrain plus the full seamless set with chunk-pipeline and CPU improvements (10+ GPU cores; no own renderer) |
 | `none` | No profile — vanilla behaviour, all mcopt optimisations off |
 
 <Tip>

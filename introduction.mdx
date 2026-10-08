@@ -1,7 +1,7 @@
 ---
 title: "mcopt: Native Metal Renderer for Minecraft on Apple Silicon"
 sidebarTitle: "Introduction"
-description: "mcopt is a Fabric mod that replaces Minecraft's OpenGL renderer with a native Apple Metal backend, delivering up to 13× vanilla frame rates on M1–M6 Macs."
+description: "mcopt swaps Minecraft's OpenGL renderer for a native Apple Metal backend, delivering up to 13× faster frame rates on Apple Silicon Macs (M1 and newer)."
 ---
 
 mcopt is a Fabric mod for Minecraft: Java Edition that replaces Minecraft's default OpenGL-based renderer with a native Apple Metal backend purpose-built for Apple Silicon Macs. Instead of routing every draw call through MoltenVK — Apple's OpenGL-over-Metal translation layer, which adds significant overhead on M-series chips — mcopt talks directly to the Metal GPU API, brings its own terrain renderer, and applies a suite of CPU, chunk-pipeline, and thread quality-of-service optimizations. The result is frame rates that range from roughly 4× to 13× vanilla on tested M1–M6 hardware. mcopt targets players and content creators on Apple Silicon Macs who want the highest possible frame rate out of Minecraft without compromising world compatibility.

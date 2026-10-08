@@ -1,10 +1,10 @@
 ---
 title: "CPU, Chunk Pipeline, and Startup Optimizations in mcopt"
 sidebarTitle: "CPU & Chunk"
-description: "mcopt applies chunk pipeline speedups, startup optimizations, memory improvements, and an edge-cap to prevent render-distance gaps. All active in the indie profile."
+description: "mcopt applies chunk pipeline speedups, startup optimizations, and an edge-cap that prevents render-distance gaps in new terrain. Active across profiles."
 ---
 
-Beyond the Metal renderer, mcopt applies a set of CPU-side and chunk pipeline optimisations that are active across all profiles (including `alpha`). These cover chunk I/O, section-clone caching, mesher paths, the light engine, render lists, entity models, and game startup. None of these flags require the own renderer or the Metal backend; they compose with vanilla's renderer too.
+Beyond the Metal renderer, mcopt applies a set of CPU-side and chunk pipeline optimisations. These cover chunk I/O, section-clone caching, mesher paths, the light engine, render lists, entity models, and game startup. None of these flags require the own renderer or the Metal backend; they compose with vanilla's renderer too. The `alpha` and `recommended` profiles enable the Sodium-specific flags (`chunk.clones`, `chunk.mesh`, `cpu.lists`, `cpu.cullRecover`); the `indie` profile omits those because its own renderer replaces Sodium's terrain pipeline, but enables all non-Sodium improvements.
 
 <Note>
 All flags described on this page are exact (behaviour-identical to vanilla) unless noted otherwise.

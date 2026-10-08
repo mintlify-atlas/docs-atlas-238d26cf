@@ -1,7 +1,7 @@
 ---
 title: "mcopt: Native Metal Renderer for Minecraft on Apple Silicon"
 sidebarTitle: "Home"
-description: "mcopt is a Fabric mod that replaces Minecraft's renderer with a native Apple Metal backend, delivering up to 13× the vanilla frame rate on M1–M6 Macs."
+description: "mcopt is a Fabric mod that replaces Minecraft's renderer with a native Apple Metal backend, unlocking the full throughput of M-series silicon on macOS 26."
 ---
 
 mcopt is a performance mod for Minecraft: Java Edition on Apple Silicon Macs. Instead of routing draw calls through OpenGL or MoltenVK, mcopt talks directly to Apple's Metal GPU API — cutting CPU overhead and unlocking the full throughput of M-series silicon. On a Mac mini M4 with a 16-chunk render distance, it reaches over 1,200 fps where vanilla manages 156.
@@ -11,42 +11,46 @@ mcopt is a performance mod for Minecraft: Java Edition on Apple Silicon Macs. In
 </Warning>
 
 <CardGroup cols={2}>
-  <Card title="Installation" icon="download" href="/installation">
+  <Card title="Installation" icon="download" href="installation">
     Download the jar, drop it in your mods folder, and start Minecraft — no Sodium needed.
   </Card>
-  <Card title="Verify It's Running" icon="circle-check" href="/verifying">
+  <Card title="Verify It's Running" icon="circle-check" href="verifying">
     Press F3 in-game to confirm the Metal renderer is active.
   </Card>
-  <Card title="Configuration" icon="sliders" href="/configuration/overview">
+  <Card title="Configuration" icon="sliders" href="configuration/overview">
     Tune profiles, enable far terrain, and override individual flags.
   </Card>
-  <Card title="Performance Numbers" icon="gauge-high" href="/guides/performance-numbers">
+  <Card title="Performance Numbers" icon="gauge-high" href="guides/performance-numbers">
     Measured fps on M4, M6, and A18 Pro hardware across vanilla, Sodium, and mcopt.
   </Card>
-  <Card title="Compatibility" icon="puzzle-piece" href="/guides/compatibility">
+  <Card title="Compatibility" icon="puzzle-piece" href="guides/compatibility">
     Which mods work alongside mcopt and how to handle conflicts.
   </Card>
-  <Card title="All Flags Reference" icon="list" href="/reference/all-flags">
+  <Card title="All Flags Reference" icon="list" href="reference/all-flags">
     Every -Dmcopt.* system property in one searchable table.
   </Card>
 </CardGroup>
 
-## What mcopt does
+## Getting started
 
 <Steps>
-  <Step title="Replaces the renderer">
-    mcopt registers a native Metal `GpuBackend` with Minecraft's renderpearl layer. When the game starts on an Apple Silicon Mac running macOS 26+, it draws the world through Metal instead of OpenGL.
+  <Step title="Install Fabric for Minecraft 26.3">
+    Download and run the Fabric installer from [fabricmc.net](https://fabricmc.net/use/installer/), selecting Minecraft 26.3. In Prism Launcher, create a new instance with version 26.3 and loader set to Fabric.
   </Step>
-  <Step title="Runs its own terrain pipeline">
-    The default `indie` profile activates mcopt's own near-terrain renderer — compact 40-byte quad records, a GPU unit-occlusion pass, and a custom block mesher that cuts meshing CPU time by 37%.
+  <Step title="Download the mcopt jar">
+    Grab the latest mcopt jar from the [Releases](https://github.com/noahdunnagan/mcopt/releases) page.
   </Step>
-  <Step title="Applies CPU and server optimizations">
-    Thread QoS elevation, chunk pipeline speedups (skip duplicate region writes, section-clone cache), and adaptive frame pacing ship with every profile.
+  <Step title="Place the jar in your mods folder">
+    Copy the jar to `~/Library/Application Support/minecraft/mods`. Create the `mods` folder if it doesn't exist (Finder: Go › Go to Folder). In Prism, open the instance, go to Mods, and click Add file. If Sodium is present, remove it — mcopt won't start alongside it.
   </Step>
-  <Step title="Optionally enables far terrain">
-    Add `mcopt.lod=true` to your config to render terrain hundreds of chunks beyond the normal render distance using Metal compute shaders and NEON noise generation.
+  <Step title="Start Minecraft with the Fabric profile">
+    Launch the game using the Fabric profile. mcopt activates automatically on Apple Silicon. Press F3 (fn + F3 on a Mac keyboard) to confirm — the bottom right should read `Metal 3 (mcopt)`.
   </Step>
 </Steps>
+
+## What mcopt does
+
+mcopt registers a native Metal `GpuBackend` with Minecraft's renderpearl layer. When the game starts on an Apple Silicon Mac running macOS 26+, it draws the world through Metal instead of OpenGL. The default `indie` profile activates mcopt's own near-terrain renderer — compact 40-byte quad records, a GPU unit-occlusion pass, and a custom block mesher that cuts meshing CPU time by 37%. Thread QoS elevation, chunk pipeline speedups (skip duplicate region writes, section-clone cache), and adaptive frame pacing ship with every profile. Far terrain is an experimental opt-in: add `mcopt.lod=true` to your config to render terrain hundreds of chunks beyond the normal render distance using Metal compute shaders and NEON noise generation.
 
 ## Requirements
 

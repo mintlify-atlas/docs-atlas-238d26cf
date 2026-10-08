@@ -1,5 +1,5 @@
 ---
-title: "Mod Compatibility Guide for mcopt"
+title: "mcopt Mod Compatibility Guide: Sodium, Fabric API, and More"
 sidebarTitle: "Compatibility"
 description: "Which mods work alongside mcopt, which are incompatible, and how Distant Horizons, Fabric API, and OpenGL-using mods interact with the Metal backend."
 ---
@@ -57,7 +57,7 @@ Because DH's internal code branches on whether the backend is OpenGL, mcopt tell
 
 If DH's config file (`config/DistantHorizons.toml`) sets `renderingEngine = "OPEN_GL"`, mcopt detects this at startup and automatically sets `mcopt.metal=false`, switching its own renderer to OpenGL. The following message appears in the log:
 
-```
+```text
 [mcopt] mcopt: Distant Horizons set to its OpenGL renderer needs OpenGL, using OpenGL; mcopt's other optimizations stay on (-Dmcopt.metal=true overrides)
 ```
 

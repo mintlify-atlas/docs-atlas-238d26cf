@@ -1,7 +1,7 @@
 ---
-title: "All mcopt Configuration Flags Reference"
+title: "mcopt JVM Flags and Configuration Properties Reference"
 sidebarTitle: "All Flags"
-description: "Complete reference for every mcopt JVM system property and mcopt.properties key, grouped by subsystem with their default values and descriptions."
+description: "Complete reference for every mcopt JVM flag and mcopt.properties key, grouped by subsystem with defaults, accepted values, and descriptions."
 ---
 
 Every mcopt setting is a JVM system property that can be set in two ways: in `config/mcopt.properties` (the key without the `-D` prefix) or as a `-Dmcopt.*` argument in the launcher's JVM arguments. For example, `mcopt.own=true` in the properties file is equivalent to passing `-Dmcopt.own=true` in JVM arguments. The special `profile` key (without the `mcopt.` prefix) is only valid in `config/mcopt.properties` or as `-Dmcopt.profile=` on the command line.
@@ -9,6 +9,8 @@ Every mcopt setting is a JVM system property that can be set in two ways: in `co
 <Note>
 **Precedence order:** JVM command-line flags (`-Dmcopt.*`) **>** `config/mcopt.properties` **>** the active profile. A flag set on the command line is never overwritten by the properties file or the profile. A key in `mcopt.properties` wins over the profile's value for that key.
 </Note>
+
+<AccordionGroup>
 
 <Accordion title="Profile & Core">
 
@@ -114,7 +116,7 @@ Far terrain is an experimental opt-in feature for Macs with 10 or more GPU cores
 | `mcopt.lod.taa` | `true` / `false` | `false` | Temporal anti-aliasing for far terrain. |
 | `mcopt.lod.small` | `true` / `false` | `false` | Small-GPU far terrain mode (MacBook Neo / 5-core GPU). Uses a quarter-size clipmap window to reduce geometry cost. |
 | `mcopt.lod.n` | integer | `2048` (`512` with `small`) | Cells across each clipmap level's window (power of two). Larger = finer detail at the cost of memory (8 N² bytes per level). |
-| `mcopt.lod.threads` | integer | cores − 4 | Generation worker thread count. Default leaves 4 threads for the game and GPU driver. |
+| `mcopt.lod.threads` | integer | `max(2, cores − 4)` | Generation worker thread count. Default leaves at least 4 threads for the game and GPU driver. |
 | `mcopt.lod.walk` | `segmented`, `rows`, `serial` | `serial` | Column walk strategy. `segmented` spawns a thread per level for more parallelism on wide GPUs. |
 | `mcopt.lod.rowSegs` | integer | `48` | Segments per column row when `mcopt.lod.walk=rows`. |
 | `mcopt.lod.crownLevels` | integer | `1` (`2` with `small`) | Finest N levels that render tree crowns floating over ground. |
@@ -206,7 +208,7 @@ Startup flags defer or parallelize work that Minecraft performs during initialis
 | `mcopt.startup.narrator` | `lazy` | — | Create the macOS speech channel on the narrator's first use instead of in Minecraft's constructor (saves ~0.47 s on the MacBook Neo). Enabled by `lazy`. |
 | `mcopt.startup.crashPreload` | `async` | — | Build the warm-up crash report (which runs an external hardware-probe command, ~0.43 s on the Neo) on a daemon thread. The memory reserve is still allocated first on the main thread. |
 | `mcopt.startup.blockCache` | `parallel`, `digest`, `parallel-digest` | — | Block state cache init strategy. `parallel` computes every block state's cache (shapes, light, sturdy faces) in parallel after the registry loop. `digest` computes serially and prints a digest. `parallel-digest` runs parallel and prints a digest for comparison. |
-| `mcopt.startup.fadeMs` | integer | `1000` | Loading overlay fade-out duration in milliseconds (fade-in is N/2 ms instead of 500). A visible UI change, not a game-logic change. |
+| `mcopt.startup.fadeMs` | integer | `-1` (1000 ms) | Loading overlay fade-out duration in milliseconds. The value `-1` (the default) uses 1000 ms; set an explicit integer to override. The fade-in is N/2 ms. A visible UI change, not a game-logic change. |
 | `mcopt.startup.blockCacheDump` | file path | — | Write a per-state block cache digest to the given file (used with `blockCache=digest` or `parallel-digest`). |
 
 </Accordion>
@@ -218,15 +220,11 @@ These flags are intended for development and testing. They are not set by any pr
 | Flag | Values | Description |
 |---|---|---|
 | `mcopt.platformCheck.fake` | `linux`, `x86_64`, version string | Simulate a different platform (OS name, CPU architecture, or macOS version) so the platform-compatibility check trips on a real Mac. Used for testing install-help messages. |
-| `mcopt.qos.log` | `true` / `false` | Log each QoS assignment as it is applied (thread name, class code, return code). |
-| `mcopt.startup.blockCacheDump` | file path | Write a line-by-line block cache value digest to the given file path for offline comparison between serial and parallel cache builds. |
-| `mcopt.metal.latency` | `true` / `false` | Record the input-poll timestamp for each frame alongside its presenting command buffer. Requires `mcopt.metal.gpuTimes=true`. Reports input-sample → commit → GPU done → presented per shown frame. |
+| `mcopt.metal.latency` | `true` / `false` | Record the input-poll timestamp for each frame alongside its presenting command buffer (requires `-Dmcopt.metal.gpuTimes=true`). Reports input-sample → commit → GPU done → presented per shown frame. |
 | `mcopt.edgeCap.log` | `true` / `false` | Log edge-cap state every 2 seconds: generated chunk count, near count, reach radius, distance range, and whether the cap is active. |
-| `mcopt.edgeCap.holdMs` | integer (ms) | `1000` | How long (in ms) after the last nearby generation event the edge cap remains active. |
-| `mcopt.edgeCap.margin` | integer (chunks) | `32` | Chunk margin beyond the render distance within which a generating chunk triggers the edge cap. |
-| `mcopt.lod.stats` | `true` / `false` | Log far terrain draw and generation stats once per second. |
-| `mcopt.lod.verify` | `true` / `false` | Compare each arriving real chunk against its far terrain column by column and log agreement. |
-| `mcopt.lod.probe` | integer (ms) | Alternating A/B draw probe for far terrain benchmarking. |
-| `mcopt.lod.dump` | directory path | Raw dump of a frame's walk inputs for the offline harness. |
+| `mcopt.edgeCap.holdMs` | integer (ms) | How long (in ms) after the last nearby generation event the edge cap remains active. Default `1000`. |
+| `mcopt.edgeCap.margin` | integer (chunks) | Chunk margin beyond the render distance within which a generating chunk triggers the edge cap. Default `32`. |
 
 </Accordion>
+
+</AccordionGroup>
